@@ -1,0 +1,32 @@
+{
+  "name": "reelbook",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Reelbook: a filmmaker's notebook. Shot lists, storyboards, slate, take log and post workflow.",
+  "scripts": {
+    "serve": "npx --yes http-server www -p 8000 -c-1",
+    "sync": "cap sync",
+    "android": "cap sync android && cap open android",
+    "ios": "cap sync ios && cap open ios",
+    "assets": "capacitor-assets generate --iconBackgroundColor '#0e0f12' --iconBackgroundColorDark '#0e0f12' --splashBackgroundColor '#0e0f12' --splashBackgroundColorDark '#0e0f12'",
+    "build:apk": "cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.1",
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/filesystem": "^8.1.3",
+    "@capacitor/geolocation": "^8.2.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/share": "^8.0.2",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.2"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "appId": "app.reelbook.notebook",
+  "appName": "Reelbook",
+  "webDir": "www",
+  "backgroundColor": "#0e0f12",
+  "android": {
+    "backgroundColor": "#0e0f12"
+  },
+  "ios": {
+    "backgroundColor": "#0e0f12",
+    "contentInset": "never"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 3000,
+      "launchAutoHide": false,
+      "backgroundColor": "#0e0f12",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true
+    },
+    "SystemBars": {
+      "insetsHandling": "css",
+      "style": "DARK"
+    }
+  }
+}

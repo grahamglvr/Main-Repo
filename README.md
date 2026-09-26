@@ -32,37 +32,73 @@ A pocket production companion for filmmakers and videographers. It covers the wh
 
 **Everywhere:** quick notes on every tab, a floating ✎ button for instant notes, multiple projects, export/import of project files, light and dark themes, and it works offline and can be installed on a phone.
 
-## Running it
+## Mobile app (iOS & Android)
 
-There's no build step and no dependencies. It's plain HTML, CSS and JavaScript.
+Reelbook is packaged as a native app with [Capacitor](https://capacitorjs.com). The same `www/` code runs inside real iOS and Android projects (`ios/`, `android/`). In the app it also gets:
+
+- **Safer storage:** projects are saved to a file inside the app, not just the web view's storage (which the OS can clear)
+- **Haptics** on the clap and when logging takes
+- **Screen stays awake** while you're in the ROLL tab
+- **Full-screen slate** with the status bar hidden
+- **Native share sheet** for project exports, take-log CSVs and shot lists
+- **GPS** for sun and golden-hour times
+- **Android back button** support, splash screen and app icons
+
+### Get it on an Android phone (no computer setup needed)
+Every push builds a debug APK with GitHub Actions:
+1. Go to the repo's **Actions** tab → **Mobile builds** → the latest run.
+2. Download the **reelbook-debug-apk** artifact and unzip it.
+3. Copy `app-debug.apk` to your phone and open it (allow "install unknown apps" when asked).
+
+### Build it yourself
+```bash
+npm install
+npm run android      # syncs and opens Android Studio → press ▶ Run
+npm run ios          # syncs and opens Xcode (Mac only) → pick your iPhone → ▶ Run
+```
+- **Android:** needs [Android Studio](https://developer.android.com/studio) (JDK 21 is bundled).
+- **iPhone:** needs a Mac with Xcode 16+. A free Apple ID can install on your own phone (it expires after 7 days). The App Store needs an Apple Developer account ($99/yr).
+- After changing anything in `www/`, run `npx cap sync` (the `npm run android` / `ios` scripts do this for you).
+- App icons and splash come from `assets/`. Regenerate with `npm run assets`.
+- The app ID is `app.reelbook.notebook` (in `capacitor.config.json`). Change it before publishing to the stores, because it can't be changed afterwards.
+
+### Publishing
+- **Google Play:** in Android Studio, *Build → Generate Signed App Bundle*, then upload the `.aab` to the Play Console ($25 one-off).
+- **App Store:** in Xcode, *Product → Archive → Distribute App*, then submit through App Store Connect.
+
+## Running in a browser
+
+It's plain HTML, CSS and JavaScript with no build step:
 
 ```bash
-# any static server works, e.g.
-python3 -m http.server 8000
-# then open http://localhost:8000
+npm run serve        # or: cd www && python3 -m http.server 8000
 ```
 
-You can also open `index.html` directly. Offline/install support needs it to be served over http(s), for example with GitHub Pages.
-
-To install it on a phone, host it (GitHub Pages works), open it in Safari or Chrome and choose **Add to Home Screen**.
+Hosted over https (for example with GitHub Pages pointed at `www/`), it also works offline and can be added to a home screen as a PWA.
 
 ## Data
 
-Everything is stored locally in your browser (`localStorage`). Nothing is uploaded. Use **Projects → ⬇ Export** (or *Wrap → Wrap & Backup → Export project*) to back up a project or move it to another device.
+Everything is stored on the device. Nothing is uploaded. Use **Projects → ⬇ Export** (or *Wrap → Wrap & Backup → Export project*) to back up a project or move it to another device.
 
 ## Structure
 
 ```
-index.html              App shell
-css/styles.css          Styles (dark/light, mobile-first)
-js/data.js              Reference data: categories, angles, moves, frame rates, palettes, checklists, specs
-js/store.js             Projects & persistence
-js/ui.js                Modals, forms, toasts
-js/components.js        Badges, quick notes, sketch pad, colour tools
-js/sun.js               Sun position / golden hour maths
-js/views/prep.js        PREP tab
-js/views/roll.js        ROLL tab
-js/views/wrap.js        WRAP tab
-js/app.js               Routing & event handling
-sw.js, manifest.webmanifest, icons/   Offline & install support
+www/                      The app (this is what goes inside the native apps)
+  index.html              App shell
+  css/styles.css          Styles (dark/light, mobile-first)
+  js/native.js            Native bridge: file storage, share, haptics, keep-awake, GPS, back button
+  js/data.js              Reference data: categories, angles, moves, frame rates, palettes, checklists, specs
+  js/store.js             Projects & persistence
+  js/ui.js                Modals, forms, toasts
+  js/components.js        Badges, quick notes, sketch pad, colour tools
+  js/sun.js               Sun position / golden hour maths
+  js/views/prep.js        PREP tab
+  js/views/roll.js        ROLL tab
+  js/views/wrap.js        WRAP tab
+  js/app.js               Routing & event handling
+  sw.js, manifest.webmanifest, icons/   PWA offline & install support
+android/, ios/            Native projects (Capacitor)
+assets/                   Source images for app icons & splash screens
+capacitor.config.json     App ID, name, splash & status bar settings
+.github/workflows/        CI: builds the Android APK (and an iOS check on demand)
 ```
