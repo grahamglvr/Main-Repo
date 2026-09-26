@@ -25,6 +25,7 @@ python3 -m http.server 8000
 | Right click | Place the selected block |
 | 1–9 / mouse wheel | Pick a hotbar slot |
 | E | Inventory and crafting |
+| M | Sound on or off |
 | H | Show or hide the controls |
 
 On touch screens, on-screen buttons appear. Tap the **Mine / Build** button to switch what a tap on the world does.
@@ -36,6 +37,8 @@ On touch screens, on-screen buttons appear. Tap the **Mine / Build** button to s
 3. Use cobblestone for a **stone pickaxe** and a **furnace**.
 4. Find **coal** for torches, and smelt **iron ore** (deep underground) into ingots for an **iron pickaxe**.
 5. Build with planks, stone bricks, glass, torches and ladders.
+
+You can only mine blocks you can see: if a solid block sits between you and the target, the outline turns red and you have to clear the way first.
 
 Recipes marked "at Workbench" or "at Furnace" need that station within 4 blocks of you. The world saves to your browser automatically every 20 seconds and when you leave. **New world** asks for confirmation before replacing it.
 

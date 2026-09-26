@@ -461,6 +461,7 @@
     if (!canCraft(r, nearStations())) return;
     for (const [id, n] of Object.entries(r.needs)) removeItem(id, n);
     addItem(r.out, r.n);
+    sfx.craft();
     toast(`Crafted ${r.n > 1 ? r.n + ' × ' : ''}${ITEM[r.out].name}`);
   }
 
@@ -483,6 +484,105 @@
     for (const [id, text] of GOALS) if (!progress[id]) return text;
     return 'You have every tool. Build a house with bricks, glass and torches.';
   }
+
+  // ---------- Sound ----------
+  // Every effect is synthesized with Web Audio, so there are no sound files to load.
+  const SOUND_KEY = 'blockstead-sound';
+  const sfx = (() => {
+    let ac = null, master = null, noiseBuf = null;
+    let on = true;
+    try { on = localStorage.getItem(SOUND_KEY) !== 'off'; } catch { /* default on */ }
+
+    // Browsers only allow audio after the player interacts with the page.
+    function unlock() {
+      if (!ac) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        ac = new AC();
+        master = ac.createGain();
+        master.gain.value = 0.5;
+        master.connect(ac.destination);
+        noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      }
+      if (ac.state === 'suspended') ac.resume();
+    }
+    const ready = () => on && ac && ac.state === 'running';
+
+    function env(gain, dur, delay) {
+      const g = ac.createGain(), t = ac.currentTime + delay;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(gain, t + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      g.connect(master);
+      return { g, t };
+    }
+    function noise({ dur = 0.08, type = 'lowpass', freq = 1000, q = 1, gain = 0.3, delay = 0 }) {
+      const { g, t } = env(gain, dur, delay);
+      const src = ac.createBufferSource();
+      src.buffer = noiseBuf;
+      const f = ac.createBiquadFilter();
+      f.type = type; f.frequency.value = freq; f.Q.value = q;
+      src.connect(f); f.connect(g);
+      src.start(t, Math.random() * 0.5, dur + 0.05);
+    }
+    function tone({ freq = 440, to = freq, dur = 0.1, type = 'sine', gain = 0.2, delay = 0 }) {
+      const { g, t } = env(gain, dur, delay);
+      const o = ac.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      o.frequency.exponentialRampToValueAtTime(to, t + dur);
+      o.connect(g);
+      o.start(t); o.stop(t + dur + 0.05);
+    }
+    const vary = () => 0.9 + Math.random() * 0.2;
+
+    const HIT = {
+      wood: v => { tone({ freq: 190 * v, to: 120, dur: 0.07, type: 'triangle', gain: 0.35 }); noise({ type: 'bandpass', freq: 900 * v, q: 2, dur: 0.05, gain: 0.25 }); },
+      stone: v => { noise({ type: 'bandpass', freq: 2600 * v, q: 4, dur: 0.05, gain: 0.45 }); tone({ freq: 420 * v, to: 300, dur: 0.035, type: 'square', gain: 0.05 }); },
+      dirt: v => noise({ type: 'lowpass', freq: 700 * v, dur: 0.08, gain: 0.4 }),
+      leaf: v => noise({ type: 'highpass', freq: 3000 * v, dur: 0.06, gain: 0.15 }),
+      glass: v => tone({ freq: 1900 * v, to: 1700, dur: 0.05, gain: 0.08 }),
+    };
+    const BREAK = {
+      wood: v => { tone({ freq: 150 * v, to: 70, dur: 0.16, type: 'triangle', gain: 0.4 }); noise({ type: 'bandpass', freq: 600, q: 1, dur: 0.14, gain: 0.3 }); },
+      stone: v => { noise({ type: 'bandpass', freq: 1400 * v, q: 1.5, dur: 0.18, gain: 0.5 }); noise({ type: 'lowpass', freq: 400, dur: 0.12, gain: 0.3 }); },
+      dirt: v => noise({ type: 'lowpass', freq: 500 * v, dur: 0.16, gain: 0.5 }),
+      leaf: v => noise({ type: 'highpass', freq: 2200 * v, dur: 0.15, gain: 0.2 }),
+      glass: () => { for (let i = 0; i < 5; i++) tone({ freq: 1800 + Math.random() * 2200, dur: 0.12, gain: 0.07, delay: i * 0.025 }); noise({ type: 'highpass', freq: 5000, dur: 0.1, gain: 0.15 }); },
+    };
+    const play = fn => { if (ready()) try { fn(vary()); } catch { /* ignore audio glitches */ } };
+
+    return {
+      unlock,
+      get on() { return on; },
+      toggle() {
+        on = !on;
+        try { localStorage.setItem(SOUND_KEY, on ? 'on' : 'off'); } catch { /* not saved */ }
+        if (on) unlock();
+        return on;
+      },
+      hit: m => play(HIT[m] || HIT.dirt),
+      break: m => play(BREAK[m] || BREAK.dirt),
+      place: () => play(v => { noise({ type: 'lowpass', freq: 450 * v, dur: 0.07, gain: 0.45 }); tone({ freq: 130 * v, to: 80, dur: 0.08, gain: 0.3 }); }),
+      step: m => play(v => noise({ type: m === 'stone' ? 'bandpass' : 'lowpass', freq: (m === 'stone' ? 1800 : m === 'wood' ? 1100 : 800) * v, q: 1.5, dur: 0.04, gain: 0.07 })),
+      jump: () => play(v => tone({ freq: 260 * v, to: 420, dur: 0.09, type: 'square', gain: 0.04 })),
+      land: () => play(() => noise({ type: 'lowpass', freq: 320, dur: 0.1, gain: 0.35 })),
+      craft: () => play(() => { tone({ freq: 660, dur: 0.12, type: 'triangle', gain: 0.18 }); tone({ freq: 990, dur: 0.18, type: 'triangle', gain: 0.18, delay: 0.09 }); }),
+      denied: () => play(() => tone({ freq: 160, to: 120, dur: 0.14, type: 'square', gain: 0.05 })),
+      click: () => play(() => tone({ freq: 900, dur: 0.03, type: 'square', gain: 0.03 })),
+    };
+  })();
+  const MATERIAL = {
+    [B.LOG]: 'wood', [B.PLANK]: 'wood', [B.BENCH]: 'wood', [B.LADDER]: 'wood', [B.TORCH]: 'wood',
+    [B.STONE]: 'stone', [B.COBBLE]: 'stone', [B.COAL_ORE]: 'stone', [B.IRON_ORE]: 'stone',
+    [B.FURNACE]: 'stone', [B.BRICK]: 'stone', [B.BEDROCK]: 'stone',
+    [B.LEAVES]: 'leaf', [B.GLASS]: 'glass',
+  };
+  const materialOf = b => MATERIAL[b] || 'dirt';
+  window.addEventListener('pointerdown', () => sfx.unlock(), true);
+  window.addEventListener('keydown', () => sfx.unlock(), true);
 
   // ---------- Input ----------
   const keys = {};
@@ -507,6 +607,7 @@
     if (k === 'e') { toggleInv(); e.preventDefault(); return; }
     if (k === 'escape') { if (invOpen()) toggleInv(false); helpEl.hidden = true; return; }
     if (k === 'h') { helpEl.hidden = !helpEl.hidden; return; }
+    if (k === 'm') { toggleSound(); return; }
     if (k >= '1' && k <= '9') { selected = +k - 1; uiDirty = true; return; }
     keys[k] = true;
     if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
@@ -566,18 +667,35 @@
   // ---------- Game loop ----------
   const camera = { x: 0, y: 0 };
   const mining = { x: -1, y: -1, t: 0, warned: false };
-  let placeCooldown = 0;
+  let placeCooldown = 0, stepTimer = 0;
 
   function targetTile() {
     const tx = Math.floor((mouse.x + camera.x) / TILE), ty = Math.floor((mouse.y + camera.y) / TILE);
     const cx = player.x + player.w / 2, cy = player.y + player.h / 2;
     const d = Math.hypot(tx + 0.5 - cx, ty + 0.5 - cy);
-    return { tx, ty, inReach: d <= REACH && inWorld(tx, ty) };
+    const inReach = d <= REACH && inWorld(tx, ty);
+    return { tx, ty, inReach, visible: inReach && canSee(tx, ty) };
+  }
+  // A block can only be mined if no solid block sits between it and the player.
+  // We check from the player's eyes and from their chest, so blocks at foot level still count as visible.
+  function canSee(tx, ty) {
+    const cx = player.x + player.w / 2;
+    return [player.y + 0.35, player.y + 1.0].some(ey => clearLine(cx, ey, tx + 0.5, ty + 0.5, tx, ty));
+  }
+  function clearLine(x0, y0, x1, y1, tx, ty) {
+    const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 0.1);
+    for (let i = 1; i < n; i++) {
+      const x = Math.floor(x0 + (x1 - x0) * i / n), y = Math.floor(y0 + (y1 - y0) * i / n);
+      if (x === tx && y === ty) return true; // reached the target's edge
+      if (solidAt(x, y)) return false;
+    }
+    return true;
   }
 
   function breakBlock(tx, ty) {
     const b = get(tx, ty);
     tiles[idx(tx, ty)] = B.AIR;
+    sfx.break(materialOf(b));
     const drop = BLOCK[b].drop;
     if (drop) addItem(drop, 1);
     if (b === B.LEAVES && Math.random() < 0.25) addItem('stick', 1);
@@ -608,8 +726,9 @@
       player.vy = up ? -5 : down ? 5 : 0;
     } else {
       player.vy = Math.min(player.vy + GRAVITY * dt, MAX_FALL);
-      if (up && player.onGround) player.vy = JUMP;
+      if (up && player.onGround) { player.vy = JUMP; sfx.jump(); }
     }
+    const fallSpeed = player.vy;
 
     const steps = Math.ceil(Math.max(Math.abs(player.vx), Math.abs(player.vy)) * dt / 0.4) || 1;
     const wasGround = player.onGround;
@@ -621,6 +740,14 @@
       player.onGround = false;
       moveY(player.vy * dt / steps);
     }
+    if (player.onGround && !wasGround && fallSpeed > 13) sfx.land();
+    if (player.onGround && dir) {
+      stepTimer -= dt;
+      if (stepTimer <= 0) {
+        stepTimer = 0.32;
+        sfx.step(materialOf(get(Math.floor(player.x + player.w / 2), Math.floor(player.y + player.h + 0.05))));
+      }
+    } else stepTimer = 0;
 
     // Mining and placing
     placeCooldown -= dt;
@@ -633,12 +760,17 @@
         const bd = BLOCK[b];
         const tool = held() && ITEM[held().id].tier ? ITEM[held().id] : null;
         const tier = tool ? tool.tier : 0;
-        if (bd.tier > tier) {
-          if (!mining.warned && bd.tier < 99) toast(`${bd.name} needs ${tierName(bd.tier)}`);
-          if (!mining.warned && bd.tier >= 99) toast('Bedrock cannot be broken');
+        if (!t.visible) {
+          if (!mining.warned) { toast('Something is in the way. Clear the blocks in front first.'); sfx.denied(); }
+          mining.warned = true;
+          mining.t = 0;
+        } else if (bd.tier > tier) {
+          if (!mining.warned) { toast(bd.tier < 99 ? `${bd.name} needs ${tierName(bd.tier)}` : 'Bedrock cannot be broken'); sfx.denied(); }
           mining.warned = true;
         } else {
           const speed = tool && bd.pick ? tool.speed : tool ? 1.5 : 1;
+          // Tick sound on each swing of the arm.
+          if (mining.t === 0 || Math.floor(mining.t / 0.25) !== Math.floor((mining.t + dt) / 0.25)) sfx.hit(materialOf(b));
           mining.t += dt;
           if (mining.t >= bd.hard / speed) { breakBlock(t.tx, t.ty); mining.t = 0; }
         }
@@ -653,6 +785,7 @@
         !(BLOCK[block].solid && boxOverlapsTile(t.tx, t.ty))) {
         tiles[idx(t.tx, t.ty)] = block;
         removeItem(it.id, 1);
+        sfx.place();
         if (block === B.BENCH) progress.placed_bench = true;
         computeLight();
       }
@@ -722,7 +855,8 @@
       const t = targetTile();
       if (inWorld(t.tx, t.ty)) {
         const sx = t.tx * TILE - cx, sy = t.ty * TILE - cy;
-        ctx.strokeStyle = t.inReach ? 'rgba(255,255,255,0.8)' : 'rgba(224,122,95,0.6)';
+        const blocked = !t.visible && get(t.tx, t.ty) !== B.AIR;
+        ctx.strokeStyle = t.inReach && !blocked ? 'rgba(255,255,255,0.8)' : 'rgba(224,122,95,0.6)';
         ctx.lineWidth = 2;
         ctx.strokeRect(sx + 1, sy + 1, TILE - 2, TILE - 2);
         const b = get(t.tx, t.ty);
@@ -772,14 +906,36 @@
     ctx.fillRect(-8, 17, 16, h - 34);
     ctx.fillStyle = '#34609f';
     ctx.fillRect(-8, h - 20, 16, 3);
-    // head
-    ctx.fillStyle = '#e0b48a';
+    // head: bald with a shiny scalp
+    ctx.fillStyle = '#f0c6a0';
     ctx.fillRect(-7, 2, 14, 15);
-    ctx.fillStyle = '#3b2a1e';
-    ctx.fillRect(-8, 0, 16, 5);
-    ctx.fillRect(-8, 0, 4, 10);
+    ctx.fillRect(-6, 0, 12, 2);
+    ctx.fillStyle = '#fbe0c6';
+    ctx.fillRect(-3, 2, 5, 2);
+    // ginger fringe around the back of the head, and the ear
+    ctx.fillStyle = '#c8622a';
+    ctx.fillRect(-8, 6, 3, 8);
+    ctx.fillStyle = '#dca07a';
+    ctx.fillRect(-5, 8, 2, 4);
+    // big ginger beard with a moustache
+    ctx.fillStyle = '#c8622a';
+    ctx.fillRect(-7, 11, 15, 7);
+    ctx.fillRect(-5, 18, 12, 3);
+    ctx.fillStyle = '#a44e1f';
+    ctx.fillRect(-3, 19, 9, 2);
+    ctx.fillRect(-7, 11, 2, 4);
+    ctx.fillStyle = '#b5561f';
+    ctx.fillRect(1, 12, 7, 2);
+    ctx.fillStyle = '#6e2c10';
+    ctx.fillRect(4, 14, 3, 1);
+    // thick black glasses
+    ctx.fillStyle = '#111114';
+    ctx.fillRect(-1, 6, 9, 7);
+    ctx.fillRect(-5, 7, 5, 2);
+    ctx.fillStyle = '#cfe3ea';
+    ctx.fillRect(1, 8, 5, 3);
     ctx.fillStyle = '#1b1b1d';
-    ctx.fillRect(3, 8, 2, 3);
+    ctx.fillRect(4, 8, 2, 2);
     // arm, swinging while mining
     const mSwing = mining.t > 0 ? Math.sin(performance.now() / 60) * 0.6 : 0;
     ctx.translate(0, 20);
@@ -923,6 +1079,18 @@
   document.getElementById('btn-inv-close').addEventListener('click', () => toggleInv(false));
   invEl.addEventListener('pointerdown', e => { if (e.target === invEl) toggleInv(false); });
   document.getElementById('btn-help').addEventListener('click', () => { helpEl.hidden = !helpEl.hidden; });
+  const soundBtn = document.getElementById('btn-sound');
+  function showSound() {
+    soundBtn.textContent = sfx.on ? 'Sound on' : 'Sound off';
+    soundBtn.setAttribute('aria-pressed', String(sfx.on));
+  }
+  function toggleSound() {
+    toast(sfx.toggle() ? 'Sound on' : 'Sound off');
+    sfx.click();
+    showSound();
+  }
+  soundBtn.addEventListener('click', toggleSound);
+  showSound();
   document.getElementById('btn-help-close').addEventListener('click', () => { helpEl.hidden = true; });
   document.getElementById('btn-save').addEventListener('click', () => { toast(save() ? 'World saved' : 'Could not save in this browser'); });
   const newBtn = document.getElementById('btn-new');
