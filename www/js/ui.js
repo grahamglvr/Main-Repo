@@ -133,6 +133,7 @@ window.UI = (() => {
       Native.shareFile(filename, text).catch(e => { if (!/cancel/i.test(String(e && e.message))) toast('Could not share file', 'error'); });
       return;
     }
+    if (window.RB_SANDBOX) return showText(filename, text);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([text], { type }));
     a.download = filename;
@@ -141,8 +142,23 @@ window.UI = (() => {
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
 
-  async function copy(text) {
-    try { await navigator.clipboard.writeText(text); toast(`Copied ${text}`); }
+  /* Where downloads are blocked (embedded previews), show the file's contents to copy instead. */
+  function showText(filename, text) {
+    modal({
+      title: `Copy ${filename}`, wide: true,
+      body: `<p class="small muted">Downloads aren't available in this preview. Copy the text below and save it as <b>${esc(filename)}</b>.</p>
+             <textarea id="export-text" rows="12" readonly>${esc(text)}</textarea>`,
+      actions: [{ label: 'Close' }, { label: 'Copy', kind: 'primary', onClick: (c, el) => {
+        const ta = el.querySelector('textarea');
+        navigator.clipboard.writeText(text).then(() => toast('Copied'), () => { ta.focus(); ta.select(); toast('Press Ctrl/⌘+C to copy'); });
+        return false;
+      } }]
+    });
+  }
+
+  function copy(text) {
+    // Call writeText synchronously inside the click so sandboxed frames allow it.
+    try { navigator.clipboard.writeText(text).then(() => toast(`Copied ${text}`), () => toast(text)); }
     catch { toast(text); }
   }
 

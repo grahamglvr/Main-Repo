@@ -9,7 +9,7 @@ window.App = (() => {
   const $ = sel => document.querySelector(sel);
 
   function parseHash() {
-    const [tab, sec] = (location.hash.replace('#', '') || Store.state.route || '').split('/');
+    const [tab, sec] = (location.hash.replace('#', '') || Store.state.route || '').split(/[/-]/); // accepts old 'prep/shots' links too
     const t = Views[tab] ? tab : 'prep';
     const want = sec || lastSec[t];
     const s = Views[t].sections.some(x => x.id === want) ? want : Views[t].sections[0].id;
@@ -17,7 +17,7 @@ window.App = (() => {
   }
 
   function go(tab, sec) {
-    location.hash = `${tab}/${sec || Views[tab].sections[0].id}`;
+    location.hash = `${tab}-${sec || Views[tab].sections[0].id}`;
   }
 
   function setPath(obj, path, val) {
@@ -44,7 +44,7 @@ window.App = (() => {
         <span class="tab-icon">${t.icon}</span><span class="tab-text"><b>${t.label}</b><small>${t.sub}</small></span></a>`;
     }).join('');
     $('#subnav').innerHTML = Views[route.tab].sections.map(s =>
-      `<a class="sub ${route.sec === s.id ? 'on' : ''}" href="#${route.tab}/${s.id}">${s.icon} ${esc(s.label)}</a>`).join('');
+      `<a class="sub ${route.sec === s.id ? 'on' : ''}" href="#${route.tab}-${s.id}">${s.icon} ${esc(s.label)}</a>`).join('');
     const on = $('#subnav .sub.on');
     if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' });
   }
@@ -66,7 +66,7 @@ window.App = (() => {
     const changed = r.tab !== route.tab || r.sec !== route.sec;
     route = r;
     lastSec[r.tab] = r.sec;
-    Store.state.route = `${r.tab}/${r.sec}`;
+    Store.state.route = `${r.tab}-${r.sec}`;
     Store.save();
     render();
     if (changed) window.scrollTo(0, 0);
@@ -213,7 +213,7 @@ window.App = (() => {
     const modals = document.querySelectorAll('.modal-backdrop');
     if (modals.length) { const x = modals[modals.length - 1].querySelector('[data-close]'); if (x) x.click(); return; }
     if (Views.roll.ui.full) { Views.roll.ui.full = false; Native.hideStatusBar(false); render(); return; }
-    if (history.length > 1 && location.hash && location.hash !== '#prep/overview') { history.back(); return; }
+    if (history.length > 1 && location.hash && location.hash !== '#prep-overview') { history.back(); return; }
     Native.minimize();
   }
 
@@ -231,8 +231,8 @@ window.App = (() => {
     Native.onBack(onBack);
     onRoute();
     Native.hideSplash();
-    if (!Native.isNative && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+    if (!Native.isNative && !window.RB_SANDBOX && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch { /* not allowed here */ }
     }
   }
 

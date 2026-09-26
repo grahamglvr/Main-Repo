@@ -76,10 +76,10 @@ window.Views = window.Views || {};
           <section class="card">
             <h2>📊 At a glance</h2>
             <div class="stats">
-              <a class="stat" href="#prep/shots"><b>${p.shots.length}</b><span>shots planned</span></a>
-              <a class="stat" href="#prep/board"><b>${p.frames.length}</b><span>storyboard frames</span></a>
-              <a class="stat" href="#prep/colour"><b>${p.palettes.length}</b><span>colour palettes</span></a>
-              <a class="stat" href="#prep/gear"><b>${packed}/${p.gear.length}</b><span>gear packed</span></a>
+              <a class="stat" href="#prep-shots"><b>${p.shots.length}</b><span>shots planned</span></a>
+              <a class="stat" href="#prep-board"><b>${p.frames.length}</b><span>storyboard frames</span></a>
+              <a class="stat" href="#prep-colour"><b>${p.palettes.length}</b><span>colour palettes</span></a>
+              <a class="stat" href="#prep-gear"><b>${packed}/${p.gear.length}</b><span>gear packed</span></a>
             </div>
           </section>
           <section class="card">
@@ -117,7 +117,7 @@ window.Views = window.Views || {};
           <select data-ui="scene">${UI.opts(scenes.map(s => ({ value: s, label: 'Scene ' + s })), ui.scene, 'All scenes')}</select>
           <span class="spacer"></span>
           <span class="muted small">${list.length} shots · ${staticCount} static / ${list.length - staticCount} moving${total ? ` · ~${Math.round(total)}s` : ''}</span>
-          <button class="btn" data-action="shot-print">${Native.isNative ? '⇪ Share' : '🖨 Print'}</button>
+          <button class="btn" data-action="shot-print">${Native.isNative ? '⇪ Share' : window.RB_SANDBOX ? '⬇ Export' : '🖨 Print'}</button>
         </div>
         ${Object.entries(groups).map(([scene, items]) => `
           <h3 class="group-title">Scene ${esc(scene)}</h3>
@@ -201,7 +201,7 @@ window.Views = window.Views || {};
       <table><thead><tr><th>#</th><th>Category</th><th>Size</th><th>Angle</th><th>Movement</th><th>Lens</th><th>FPS</th><th>Description</th><th>✓</th></tr></thead><tbody>${rows}</tbody></table>
 </body></html>`;
     // Apps can't print from the web view, so share an HTML file instead (it opens and prints anywhere).
-    if (Native.isNative) return UI.download(`${UI.slug(p.name)}-shot-list.html`, html, 'text/html');
+    if (Native.isNative || window.RB_SANDBOX) return UI.download(`${UI.slug(p.name)}-shot-list.html`, html, 'text/html');
     const w = window.open('', '_blank');
     if (!w) return UI.toast('Allow pop-ups to print', 'error');
     w.document.write(html.replace('</body>', '<script>window.onload=()=>window.print()<\/script></body>'));
@@ -235,7 +235,7 @@ window.Views = window.Views || {};
           <button class="btn primary" data-action="frame-add">＋ New frame</button>
           ${unboarded ? `<button class="btn" data-action="frame-from-shots">⇢ Build from shot list (${unboarded})</button>` : ''}
           <span class="spacer"></span>
-          <span class="muted small">Aspect ${esc(p.meta.aspect)} · <a class="link" href="#prep/overview">change</a></span>
+          <span class="muted small">Aspect ${esc(p.meta.aspect)} · <a class="link" href="#prep-overview">change</a></span>
         </div>
         <div class="chips">
           <button class="chip ${!ui.boardCat ? 'on' : ''}" data-action="board-cat" data-cat="">All <b>${p.frames.length}</b></button>

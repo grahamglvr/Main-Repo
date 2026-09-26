@@ -8,3 +8,4 @@ android/.gradle/
 android/local.properties
 ios/App/build/
 ios/DerivedData/
+dist/

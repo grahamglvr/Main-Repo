@@ -62,7 +62,7 @@ window.Store = (() => {
     } catch (e) { console.warn('Reelbook: could not load saved data', e); }
     if (!state || !state.projects || !Object.keys(state.projects).length) {
       const p = newProject('My First Shoot');
-      state = { projects: { [p.id]: p }, currentId: p.id, theme: 'dark', route: 'prep/overview' };
+      state = { projects: { [p.id]: p }, currentId: p.id, theme: 'dark', route: 'prep-overview' };
     }
     if (!state.projects[state.currentId]) state.currentId = Object.keys(state.projects)[0];
     return state;

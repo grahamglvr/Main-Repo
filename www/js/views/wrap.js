@@ -124,7 +124,7 @@
       return `
         <div class="grid two">
           <section class="card">
-            <div class="card-head"><h2>🎨 Palette reference</h2><a class="link" href="#prep/colour">Edit in Prep →</a></div>
+            <div class="card-head"><h2>🎨 Palette reference</h2><a class="link" href="#prep-colour">Edit in Prep →</a></div>
             ${p.palettes.length ? p.palettes.map(pal => `<div class="grade-pal"><b>${esc(pal.name)}</b>${C.swatchRow(pal.colors)}${pal.mood ? `<p class="small muted">${esc(pal.mood)}</p>` : ''}</div>`).join('')
               : '<p class="muted small">No palettes yet. Build one in Prep → Colour to guide the grade.</p>'}
           </section>

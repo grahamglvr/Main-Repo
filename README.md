@@ -74,6 +74,8 @@ It's plain HTML, CSS and JavaScript with no build step:
 npm run serve        # or: cd www && python3 -m http.server 8000
 ```
 
+For quick testing on a phone without hosting anything, `npm run build:single` bundles the whole app into one file, `dist/reelbook.html`. Open it in any browser, or send it to yourself and open it on the phone. `npm run build:embed` makes a body-only version for sandboxed preview pages, where exports appear as copyable text because downloads are blocked there.
+
 Hosted over https (for example with GitHub Pages pointed at `www/`), it also works offline and can be added to a home screen as a PWA.
 
 ## Data

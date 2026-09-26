@@ -9,7 +9,7 @@
   const tracker = {
     id: 'tracker', label: 'Shot Tracker', icon: '✅',
     render(p) {
-      if (!p.shots.length) return UI.empty('✅', 'Nothing to track yet', 'Build your shot list in Prep and it shows up here as a live checklist for the day.', '<a class="btn primary" href="#prep/shots">Go to Shot List</a>');
+      if (!p.shots.length) return UI.empty('✅', 'Nothing to track yet', 'Build your shot list in Prep and it shows up here as a live checklist for the day.', '<a class="btn primary" href="#prep-shots">Go to Shot List</a>');
       const done = p.shots.filter(s => s.done).length;
       const must = p.shots.filter(s => s.priority !== 'Nice to have');
       const mustLeft = must.filter(s => !s.done).length;
@@ -145,7 +145,7 @@
             <button class="btn" data-action="slate-next-scene">Next scene ⇢</button>
           </div>
         </div>
-        ${recent.length ? `<section class="card"><div class="card-head"><h2>Recent takes</h2><a class="link" href="#roll/takes">Full log →</a></div>${takeRows(recent)}</section>` : ''}`;
+        ${recent.length ? `<section class="card"><div class="card-head"><h2>Recent takes</h2><a class="link" href="#roll-takes">Full log →</a></div>${takeRows(recent)}</section>` : ''}`;
     },
     actions: {
       'slate-clap': clap,

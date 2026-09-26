@@ -38,7 +38,7 @@ window.C = (() => {
     const shown = compact ? list.slice(0, 3) : list;
     return `
       <section class="card notes-card">
-        <div class="card-head"><h2>📝 Quick notes</h2>${compact && list.length > 3 ? `<a class="link" href="#${tab}/notes">All ${list.length} →</a>` : ''}</div>
+        <div class="card-head"><h2>📝 Quick notes</h2>${compact && list.length > 3 ? `<a class="link" href="#${tab}-notes">All ${list.length} →</a>` : ''}</div>
         <div class="note-input">
           <textarea data-note-input="${tab}" rows="2" placeholder="Jot it down… (Ctrl/⌘+Enter to save)"></textarea>
           <button class="btn primary" data-action="note-add" data-tab="${tab}">Add</button>

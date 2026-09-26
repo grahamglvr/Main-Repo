@@ -39,12 +39,19 @@ window.Native = (() => {
   const hapticSuccess = () => { if (has('Haptics')) quiet(call('Haptics', 'notification', { type: 'SUCCESS' })); };
 
   /* ---------- Screen ---------- */
-  let awake = false;
+  let awake = false, wakeLock = null;
   function keepAwake(on) {
-    if (on === awake || !has('KeepAwake')) return;
+    if (on === awake) return;
     awake = on;
-    quiet(call('KeepAwake', on ? 'keepAwake' : 'allowSleep'));
+    if (has('KeepAwake')) return quiet(call('KeepAwake', on ? 'keepAwake' : 'allowSleep'));
+    // Browser fallback: Screen Wake Lock API (released automatically when the tab is hidden).
+    if (!('wakeLock' in navigator)) return;
+    if (on) navigator.wakeLock.request('screen').then(l => { wakeLock = l; }, () => {});
+    else if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
   }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && awake && !isNative && 'wakeLock' in navigator) navigator.wakeLock.request('screen').then(l => { wakeLock = l; }, () => {});
+  });
   const statusBar = dark => {
     if (!has('StatusBar')) return;
     quiet(call('StatusBar', 'setStyle', { style: dark ? 'DARK' : 'LIGHT' }));
