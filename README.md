@@ -42,7 +42,7 @@ On touch screens, on-screen buttons appear. Tap the **Mine / Build** button to s
 
 ### Items
 
-Every item belongs to a category, shown as a coloured corner on inventory slots and as tabs in the crafting menu:
+Every item belongs to a category, shown as a coloured corner on inventory slots and as tabs in the crafting menu. Recipes you can make right now are listed first, under **Ready to craft**:
 
 | Category | Examples |
 | --- | --- |
@@ -62,6 +62,7 @@ Leaves and bushes drop fibre. Each piece of fibre has a 50% chance of coming wit
 ### Survival
 
 - You have **100 health**. **Mutant rats** and **ghouls** roam the surface and dark caves and hurt you on contact. Falls of more than 4 blocks also hurt.
+- Creatures wander at random and only chase you when you're within about 10 blocks and nothing solid blocks their view.
 - **Crawlers** are pale, blind cave dwellers that spawn deep underground in the dark. They run from fire: placed torches, campfires and furnaces, or a torch in your hand.
 - Rats drop raw meat. Cook it on a **Campfire** (3 logs, 2 sticks) or in a furnace. Ghouls and crawlers drop string and rope.
 - At 0 health you wake up back at the start and keep your items.

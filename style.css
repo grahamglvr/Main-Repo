@@ -186,6 +186,8 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 #craft-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
 #craft-tabs button { font-size: 13px; padding: 2px 8px; }
 #craft-tabs button[aria-pressed="true"] { border-color: var(--brass); color: var(--brass); }
+#recipes h4.ready { --cat: var(--good); }
+#recipes h4.later { --cat: var(--muted); }
 #recipes h4.group {
   margin: 6px 0 0; font: 11px "Silkscreen", ui-monospace, monospace; letter-spacing: .04em;
   color: var(--cat); text-transform: uppercase;

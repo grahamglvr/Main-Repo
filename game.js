@@ -1179,7 +1179,7 @@
     }
     return best;
   }
-  const MAX_ENEMIES = 5, MELEE_REACH = 2.4;
+  const MAX_ENEMIES = 5, MELEE_REACH = 2.4, CHASE_RANGE = 10;
   let enemies = [], arrows = [], floaters = [];
   let spawnTimer = 30, attackCooldown = 0, iframes = 0;
 
@@ -1241,11 +1241,17 @@
       const d = ENEMY[e.type];
       const [ecx, ecy] = centre(e);
       const dx = pcx - ecx, dy = pcy - ecy;
+      // Only hunt the player when they're close and nothing solid is in the way; check a few times a second.
+      e.lookT = (e.lookT || 0) - dt;
+      if (e.lookT <= 0) {
+        e.lookT = 0.25 + Math.random() * 0.1;
+        e.seesPlayer = Math.hypot(dx, dy) < CHASE_RANGE && clearLine(ecx, e.y + e.h * 0.3, pcx, pcy, -1, -1);
+      }
       let dir, speed = d.speed;
       const fire = d.fearsFire ? nearestFire(ecx, ecy) : null;
       e.fleeing = fire !== null;
       if (e.fleeing) { dir = ecx < fire ? -1 : 1; speed *= 1.3; } // run away from the flames
-      else if (Math.abs(dx) < 16 && Math.abs(dy) < 8) dir = Math.abs(dx) > 0.3 ? Math.sign(dx) : 0; // chase
+      else if (e.seesPlayer) dir = Math.abs(dx) > 0.3 ? Math.sign(dx) : 0; // chase
       else {
         e.wanderT -= dt;
         if (e.wanderT <= 0) { e.wander = [-1, 0, 1][(Math.random() * 3) | 0]; e.wanderT = 2 + Math.random() * 3; }
@@ -1255,7 +1261,12 @@
       e.kb -= e.kb * Math.min(1, dt * 6);
       e.vx = dir * speed + e.kb;
       stepBody(e, dt);
-      if (e.blocked && e.onGround) e.vy = d.jump;
+      if (e.blocked && e.onGround) {
+        // A wandering creature that stays stuck against a wall turns around instead of pushing into it.
+        e.stuck = (e.stuck || 0) + dt;
+        if (!e.seesPlayer && !e.fleeing && e.stuck > 0.6) { e.wander = -e.wander; e.wanderT = 2 + Math.random() * 3; e.stuck = 0; }
+        else e.vy = d.jump;
+      } else e.stuck = 0;
       e.flash = Math.max(0, e.flash - dt);
       if (iframes <= 0 && !e.fleeing && overlaps(e, player)) {
         iframes = 0.8;
@@ -2042,19 +2053,28 @@
       tabsEl.append(b);
     }
     recipesEl.replaceChildren();
-    const list = RECIPES.filter(r => craftFilter === 'All' || ITEM[r.out].cat === craftFilter)
-      .sort((a, b) => CATS.indexOf(ITEM[a.out].cat) - CATS.indexOf(ITEM[b.out].cat));
-    let lastCat = null;
-    for (const r of list) {
+    // Recipes you can make right now come first, then the rest grouped by category.
+    const byCat = (a, b) => CATS.indexOf(ITEM[a.out].cat) - CATS.indexOf(ITEM[b.out].cat);
+    const shown = RECIPES.filter(r => craftFilter === 'All' || ITEM[r.out].cat === craftFilter);
+    const ready = shown.filter(r => canCraft(r, st)).sort(byCat);
+    const later = shown.filter(r => !canCraft(r, st)).sort(byCat);
+    const heading = (text, cls) => {
+      const h = document.createElement('h4');
+      h.className = `group ${cls}`;
+      h.textContent = text;
+      recipesEl.append(h);
+    };
+    let lastGroup = null;
+    for (const r of [...ready, ...later]) {
+      const ok = ready.includes(r);
       const cat = ITEM[r.out].cat;
-      if (craftFilter === 'All' && cat !== lastCat) {
-        const h = document.createElement('h4');
-        h.className = `group cat-${cat.toLowerCase()}`;
-        h.textContent = cat;
-        recipesEl.append(h);
+      const group = ok ? 'ready' : craftFilter === 'All' ? cat : 'later';
+      if (group !== lastGroup) {
+        if (group === 'ready') heading('Ready to craft', 'ready');
+        else if (group === 'later') { if (ready.length) heading('Need more materials', 'later'); }
+        else heading(cat, `cat-${cat.toLowerCase()}`);
       }
-      lastCat = cat;
-      const ok = canCraft(r, st);
+      lastGroup = group;
       const row = document.createElement('div');
       row.className = 'recipe' + (ok ? ' ok' : '');
       const icon = document.createElement('div');
