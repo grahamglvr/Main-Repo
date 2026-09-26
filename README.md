@@ -3,7 +3,9 @@ Main Repo for Learning Claude Code
 
 ## Blockstead
 
-A 2D post-apocalyptic survival, crafting and building game written in plain HTML5 Canvas and JavaScript. Scavenge a ruined wasteland for supply chests, chop and mine resources, craft tools and weapons, and fight off mutants. It has no dependencies and no build step.
+A 2D post-apocalyptic survival, crafting and building game written in plain HTML5 Canvas and JavaScript. It has no dependencies and no build step.
+
+The year is 2210. Nuclear war and natural disasters have left the surface in ruins, and you are the last survivor of an underground bunker. Scavenge the wasteland for supply chests, chop and mine resources, craft tools and weapons, fight off mutants, and search the ruins for the technology of the old world. Each new world opens with a short surface report: the region's name and how many chests, ruins, craters and oak trees it has.
 
 ### Play
 

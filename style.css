@@ -207,6 +207,33 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 
 @media (prefers-reduced-motion: reduce) { #toast, #health-fill { transition: none; } }
 
+/* New-world story */
+#story {
+  position: fixed; inset: 0; z-index: 40;
+  display: grid; place-items: center; padding: 16px;
+  background: radial-gradient(ellipse at center, rgb(20 16 12 / .7), rgb(8 6 4 / .92));
+}
+.story-panel {
+  width: min(520px, 100%); max-height: calc(100% - 32px); overflow: auto; box-sizing: border-box;
+  padding: 18px 22px 20px; border-color: #6a5236;
+}
+.story-panel h2 { margin: 4px 0 10px; font: 22px "Silkscreen", ui-monospace, monospace; color: var(--brass); text-wrap: balance; }
+.story-panel p { margin: 0 0 10px; max-width: 60ch; }
+.story-panel .threat { color: var(--bad); }
+#story-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; margin: 14px 0; }
+#story-facts div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--edge); padding-bottom: 2px; }
+#story-facts dt { color: var(--muted); font-size: 14px; }
+#story-facts dd { margin: 0; color: var(--brass); font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) { #story-facts { grid-template-columns: 1fr; } }
+.story-panel > * { animation: story-in .6s both; }
+.story-panel > :nth-child(2) { animation-delay: .15s; }
+.story-panel > :nth-child(3) { animation-delay: .5s; }
+.story-panel > :nth-child(4) { animation-delay: 1s; }
+.story-panel > :nth-child(5) { animation-delay: 1.5s; }
+.story-panel > :nth-child(n+6) { animation-delay: 2s; }
+@keyframes story-in { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .story-panel > * { animation: none; } }
+
 /* Layering: dialogs sit above the HUD */
 #help { z-index: 20; }
 #tip { z-index: 15; }

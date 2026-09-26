@@ -230,9 +230,22 @@
     }
   }
   const TEX = [];
+  // Terrain drawn as 4 smaller squares: each quarter of a block comes from one of 4 texture variants.
+  const QUARTERED = new Set([B.GRASS, B.DIRT, B.STONE, B.COAL_ORE, B.IRON_ORE, B.SAND, B.ASH, B.BEDROCK, B.LEAVES, B.OAK_LEAVES]);
+  // Terrain whose exposed outer corners are trimmed away, so slopes and edges look finer.
+  const TRIMMED = new Set([B.GRASS, B.DIRT, B.STONE, B.COAL_ORE, B.IRON_ORE, B.SAND, B.ASH]);
+  const TEXV = [];
   function buildTextures() {
     for (let id = 1; id < BLOCK.length; id++) {
-      const c = makeCanvas(32), p = painter(c, id * 97 + 13);
+      const n = QUARTERED.has(id) ? 4 : 1;
+      TEXV[id] = [];
+      for (let v = 0; v < n; v++) TEXV[id].push(drawBlockTexture(id, v));
+      TEX[id] = TEXV[id][0];
+    }
+  }
+  function drawBlockTexture(id, v) {
+    {
+      const c = makeCanvas(32), p = painter(c, id * 97 + 13 + v * 1009);
       switch (id) {
         case B.DIRT: p.fill('#7a5234'); p.speckle(['#5e3d25', '#8d6240', '#6c4a2f'], 0.3); break;
         case B.GRASS:
@@ -334,16 +347,16 @@
           [[4, 8], [9, 7], [11, 11], [6, 12]].forEach(([x, y]) => { p.px(x, y, '#b3263a', 2, 2); p.px(x, y, '#e2566b'); });
           break;
       }
-      refineTexture(id, c);
-      TEX[id] = c;
+      refineTexture(id, c, v);
+      return c;
     }
   }
 
   const NATURAL = new Set([B.GRASS, B.DIRT, B.STONE, B.COAL_ORE, B.IRON_ORE, B.SAND, B.ASH, B.BEDROCK,
     B.LOG, B.OAK_LOG, B.LEAVES, B.OAK_LEAVES, B.BUSH, B.COBBLE, B.SCRAP]);
   const BUILT = new Set([B.PLANK, B.BRICK, B.FURNACE, B.CHEST, B.COBBLE, B.SCRAP]);
-  function refineTexture(id, c) {
-    const g = c.getContext('2d'), rnd = mulberry32(id * 31 + 7);
+  function refineTexture(id, c, v = 0) {
+    const g = c.getContext('2d'), rnd = mulberry32(id * 31 + 7 + v * 977);
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalCompositeOperation = 'source-atop'; // only paint over pixels that are already there
     const dot = (x, y, col, w = 1, h = 1) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
@@ -388,6 +401,13 @@
       case B.GLASS:
         dot(4, 4, 'rgba(255,255,255,0.8)', 2, 1); dot(4, 5, 'rgba(255,255,255,0.8)', 1, 1);
         break;
+    }
+    if (QUARTERED.has(id) && id !== B.LEAVES && id !== B.OAK_LEAVES) {
+      // Faint seams along each quarter's top and left edges, so every block reads as 4 smaller squares
+      for (const o of [0, 16]) {
+        dot(o, 0, 'rgba(0,0,0,0.12)', 1, 32); dot(0, o, 'rgba(0,0,0,0.12)', 32, 1);
+        dot(o + 1, 0, 'rgba(255,255,255,0.05)', 1, 32); dot(0, o + 1, 'rgba(255,255,255,0.05)', 32, 1);
+      }
     }
     if (BUILT.has(id)) {
       dot(0, 0, 'rgba(255,255,255,0.14)', 32, 1); dot(0, 0, 'rgba(255,255,255,0.1)', 1, 32);
@@ -509,6 +529,8 @@
   const get = (x, y) => inWorld(x, y) ? tiles[idx(x, y)] : B.BEDROCK;
 
   const crater = new Uint8Array(W); // columns scorched by old blasts
+  // What generation produced, for the new-world summary.
+  let worldInfo = { craters: 0, ruins: 0, oaks: 0 };
   function computeSurface() {
     // Three layers of noise, with a slowly varying roughness so some areas are flat and others jagged.
     for (let x = 0; x < W; x++) {
@@ -521,12 +543,14 @@
     }
     // Blast craters
     crater.fill(0);
+    worldInfo = { craters: 0, ruins: 0, oaks: 0 };
     const rnd = mulberry32(seed + 99);
     const n = 4 + ((rnd() * 4) | 0);
     for (let k = 0; k < n; k++) {
       const cx = 8 + ((rnd() * (W - 16)) | 0);
       if (Math.abs(cx - W / 2) < 12) continue; // not on the spawn point
       const r = 3 + ((rnd() * 5) | 0), depth = 2 + ((rnd() * 3) | 0);
+      worldInfo.craters++;
       for (let x = cx - r; x <= cx + r; x++) {
         if (x < 0 || x >= W) continue;
         const f = 1 - ((x - cx) / r) ** 2;
@@ -575,6 +599,7 @@
     for (let x = 6; x < W - 14; x++) {
       if (rnd() > 0.035 || nearSpawn(x) || nearSpawn(x + 10) || crater[x]) continue;
       const w = 5 + ((rnd() * 5) | 0), ht = 3 + ((rnd() * 3) | 0);
+      worldInfo.ruins++;
       const base = surface[x + (w >> 1)];
       const wall = rnd() < 0.5 ? B.BRICK : B.COBBLE;
       for (let c = x; c < x + w; c++) {
@@ -609,6 +634,7 @@
         continue;
       }
       const oak = kind > 0.72;
+      if (oak) worldInfo.oaks++;
       const trunk = oak ? 6 + ((rnd() * 3) | 0) : 4 + ((rnd() * 3) | 0);
       for (let i = 1; i <= trunk; i++) set(x, h - i, oak ? B.OAK_LOG : B.LOG);
       const top = h - trunk, r = oak ? 3 : 2;
@@ -1528,6 +1554,29 @@
     ctx.fillText(`chest ${Math.round(bd)}m`, ex, ey + 24);
   }
 
+  const Q = TILE / 2;
+  const openAt = (x, y) => !BLOCK[get(x, y)].solid;
+  function drawTile(b, x, y, sx, sy) {
+    const vars = TEXV[b];
+    if (vars.length === 1) { ctx.drawImage(vars[0], sx, sy, TILE, TILE); return; }
+    const trim = TRIMMED.has(b);
+    for (let q = 0; q < 4; q++) {
+      const dx = q & 1, dy = q >> 1;
+      const qx = sx + dx * Q, qy = sy + dy * Q;
+      if (trim && openAt(x + (dx ? 1 : -1), y) && openAt(x, y + (dy ? 1 : -1))) {
+        // Outer corner: leave it open, showing the cave wall underground or the sky above
+        if (y > surface[x]) ctx.drawImage(y > surface[x] + 5 ? WALL_STONE : WALL_DIRT, dx * 16, dy * 16, 16, 16, qx, qy, Q, Q);
+        continue;
+      }
+      const v = (hash2(x * 2 + dx, y * 2 + dy, 5) * vars.length) | 0;
+      ctx.drawImage(vars[v], dx * 16, dy * 16, 16, 16, qx, qy, Q, Q);
+      // A grass quarter below a trimmed corner gets its own grassy top
+      if (b === B.GRASS && dy === 1 && openAt(x + (dx ? 1 : -1), y) && openAt(x, y - 1)) {
+        ctx.drawImage(vars[v], dx * 16, 0, 16, 7, qx, qy, Q, 7);
+      }
+    }
+  }
+
   function render() {
     ctx.imageSmoothingEnabled = false;
     drawSky();
@@ -1541,7 +1590,7 @@
       if (y > surface[x] && (b === B.AIR || !BLOCK[b].solid)) {
         ctx.drawImage(y > surface[x] + 5 ? WALL_STONE : WALL_DIRT, sx, sy, TILE, TILE);
       }
-      if (b) ctx.drawImage(TEX[b], sx, sy, TILE, TILE);
+      if (b) drawTile(b, x, y, sx, sy);
     }
 
     for (const e of enemies) drawEnemy(e, cx, cy);
@@ -1700,144 +1749,222 @@
     ctx.stroke();
   }
 
+  // ---------- Sprites ----------
+  // Sprites are painted facing right onto a scratch canvas, with the origin at their top centre,
+  // then stamped onto the screen with a 1px dark outline (and a white flash when hit).
+  const SPR = 112, SPR_OX = 56, SPR_OY = 30;
+  const sprCanvas = document.createElement('canvas'), tintCanvas = document.createElement('canvas');
+  sprCanvas.width = sprCanvas.height = tintCanvas.width = tintCanvas.height = SPR;
+  const sctx = sprCanvas.getContext('2d'), tctx = tintCanvas.getContext('2d');
+  function tint(col) {
+    tctx.globalCompositeOperation = 'source-over';
+    tctx.clearRect(0, 0, SPR, SPR);
+    tctx.drawImage(sprCanvas, 0, 0);
+    tctx.globalCompositeOperation = 'source-in';
+    tctx.fillStyle = col;
+    tctx.fillRect(0, 0, SPR, SPR);
+  }
+  function drawSprite(x, y, face, flash, paint) {
+    sctx.setTransform(1, 0, 0, 1, 0, 0);
+    sctx.clearRect(0, 0, SPR, SPR);
+    sctx.imageSmoothingEnabled = false;
+    sctx.translate(SPR_OX, SPR_OY);
+    if (face < 0) sctx.scale(-1, 1);
+    paint(sctx);
+    tint('rgba(14,11,9,0.9)');
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) ctx.drawImage(tintCanvas, x - SPR_OX + dx, y - SPR_OY + dy);
+    ctx.drawImage(sprCanvas, x - SPR_OX, y - SPR_OY);
+    if (flash > 0) {
+      tint('rgba(255,255,255,0.7)');
+      ctx.drawImage(tintCanvas, x - SPR_OX, y - SPR_OY);
+    }
+  }
+  function groundShadow(x, footY, rx) {
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath();
+    ctx.ellipse(x, footY, rx, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Shorthand for filling pixel rectangles on the sprite canvas.
+  const R = (g, col, x, y, w = 1, h = 1) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+
   function drawEnemy(e, cx, cy) {
     const x = Math.round(e.x * TILE - cx), y = Math.round(e.y * TILE - cy);
     const w = Math.round(e.w * TILE), h = Math.round(e.h * TILE);
-    const step = e.onGround && e.vx ? Math.sin(performance.now() / 70) * 2 : 0;
-    ctx.save();
-    ctx.translate(x + w / 2, y);
-    ctx.scale(e.face, 1);
-    if (e.type === 'rat') {
-      ctx.fillStyle = '#d98a9a'; // tail
-      ctx.fillRect(-w / 2 - 8, h - 8, 10, 2);
-      ctx.fillRect(-w / 2 - 12, h - 10, 5, 2);
-      ctx.fillStyle = '#5e5047';
-      ctx.fillRect(-w / 2, 4, w - 6, h - 8);
-      ctx.fillRect(w / 2 - 10, 2, 10, 10);
-      ctx.fillStyle = '#7a6a5e';
-      ctx.fillRect(-w / 2 + 2, 4, w - 12, 3);
-      ctx.fillStyle = '#d98a9a';
-      ctx.fillRect(w / 2 - 8, 0, 4, 4);   // ear
-      ctx.fillRect(w / 2 - 1, 7, 3, 3);   // nose
-      ctx.fillStyle = '#ff3b3b';
-      ctx.fillRect(w / 2 - 5, 5, 2, 2);   // eye
-      ctx.fillStyle = '#3e342e';
-      ctx.fillRect(-w / 2 + 3 + step, h - 4, 4, 4);
-      ctx.fillRect(w / 2 - 12 - step, h - 4, 4, 4);
-    } else if (e.type === 'crawler') {
-      // Hunched and pale, on long bony limbs, with dark empty eye sockets
-      const SK = '#d9d4c8', SH = '#aaa396';
-      ctx.fillStyle = SH;
-      ctx.fillRect(-w / 2 + 1 + step, h - 12, 3, 12);      // back leg
-      ctx.fillRect(w / 2 - 6 - step, h - 12, 3, 12);       // front arm reaching down
-      ctx.fillStyle = SK;
-      ctx.fillRect(-w / 2, h - 22, w - 4, 11);             // hunched back
-      ctx.fillRect(-w / 2 + 2, h - 25, w - 10, 4);         // spine hump
-      ctx.fillStyle = SH;
-      for (let i = 0; i < 4; i++) ctx.fillRect(-w / 2 + 3 + i * 5, h - 24, 2, 2); // ridges of the spine
-      ctx.fillStyle = SK;
-      ctx.fillRect(w / 2 - 8, h - 30, 11, 11);             // head, low and forward
-      ctx.fillRect(-w / 2 + 4 - step, h - 12, 3, 12);      // near leg
-      ctx.fillRect(w / 2 - 2 + step, h - 12, 3, 12);       // near arm
-      ctx.fillStyle = '#0c0b0a';
-      ctx.fillRect(w / 2 - 2, h - 27, 3, 3);               // eye socket
-      ctx.fillRect(w / 2 - 1, h - 21, 4, 1);               // mouth
-      ctx.fillStyle = '#6e1f1f';
-      ctx.fillRect(w / 2, h - 20, 2, 1);
-    } else {
-      ctx.fillStyle = '#3a3230'; // legs
-      ctx.fillRect(-7 + step, h - 18, 6, 18);
-      ctx.fillRect(1 - step, h - 18, 6, 18);
-      ctx.fillStyle = '#4a3b2e'; // torn shirt
-      ctx.fillRect(-8, 17, 16, h - 34);
-      ctx.fillStyle = '#9fb58a';
-      ctx.fillRect(-3, h - 22, 4, 3);
-      ctx.fillRect(-6, 1, 14, 16); // head
-      ctx.fillStyle = '#7f9570';
-      ctx.fillRect(-6, 1, 14, 3);
-      ctx.fillStyle = '#e8ff7a'; // glowing eyes
-      ctx.fillRect(3, 7, 3, 2);
-      ctx.fillStyle = '#2e2a26';
-      ctx.fillRect(2, 13, 5, 2);
-      ctx.fillStyle = '#9fb58a'; // reaching arm
-      ctx.fillRect(4, 20, 12, 4);
-    }
-    if (e.flash > 0) {
-      ctx.globalAlpha = 0.6;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(-w / 2 - 2, 0, w + 4, h);
-      ctx.globalAlpha = 1;
-    }
-    ctx.restore();
+    const now = performance.now();
+    const moving = e.onGround && Math.abs(e.vx) > 0.2;
+    const step = moving ? Math.sin(now / 70) * 2 : 0;
+    if (e.onGround) groundShadow(x + w / 2, y + h, w / 2 + 2);
+    drawSprite(x + w / 2, y, e.face, e.flash, g => {
+      if (e.type === 'rat') paintRat(g, w, h, step, now);
+      else if (e.type === 'crawler') paintCrawler(g, w, h, step, now, e);
+      else paintGhoul(g, w, h, step, now);
+    });
     if (e.hp < e.max) {
       ctx.fillStyle = 'rgba(10,8,6,0.8)';
-      ctx.fillRect(x + w / 2 - 13, y - 8, 26, 5);
+      ctx.fillRect(x + w / 2 - 13, y - 9, 26, 5);
       ctx.fillStyle = '#e2566b';
-      ctx.fillRect(x + w / 2 - 12, y - 7, 24 * Math.max(0, e.hp) / e.max, 3);
+      ctx.fillRect(x + w / 2 - 12, y - 8, 24 * Math.max(0, e.hp) / e.max, 3);
     }
   }
 
+  function paintRat(g, w, h, step, now) {
+    const FUR = '#5e5047', DARK = '#463a33', LIGHT = '#7a6a5e', BELLY = '#8a7a6c', PINK = '#d98a9a';
+    const L = -w / 2, head = w / 2 - 11;
+    // tail: a pink curl that waves
+    for (let i = 0; i < 9; i++) {
+      const ty = h - 7 - Math.sin(now / 160 + i * 0.7) * i * 0.35 - i * 0.5;
+      R(g, i < 4 ? PINK : '#c47584', L - 1 - i * 1.6, Math.round(ty), 2, i < 5 ? 2 : 1);
+    }
+    // legs
+    R(g, DARK, L + 3 + step, h - 5, 3, 5); R(g, DARK, head - 3 - step, h - 5, 3, 5);
+    R(g, PINK, L + 3 + step, h - 1, 4, 1); R(g, PINK, head - 3 - step, h - 1, 4, 1);
+    // body, rounded
+    R(g, FUR, L + 3, 5, head - L - 3, 1);
+    R(g, FUR, L + 1, 6, head - L + 1, h - 11);
+    R(g, FUR, L + 2, h - 5, head - L - 1, 1);
+    R(g, LIGHT, L + 4, 6, head - L - 8, 2);
+    R(g, BELLY, L + 5, h - 7, head - L - 6, 2);
+    for (let i = 0; i < 5; i++) R(g, DARK, L + 4 + i * 4, 4 + (i % 2), 1, 2); // mutant spines
+    for (let i = 0; i < 6; i++) R(g, DARK, L + 3 + i * 3, 9 + (i % 3), 1, 1);  // fur texture
+    // head and snout
+    R(g, FUR, head - 1, 4, 9, 9);
+    R(g, FUR, head + 8, 6, 3, 5);
+    R(g, LIGHT, head, 4, 6, 1);
+    R(g, DARK, head - 1, 11, 9, 2);
+    R(g, PINK, head + 11, 7, 2, 2);                   // nose
+    R(g, '#f4efe6', head + 9, 11, 1, 2);               // teeth
+    R(g, PINK, head + 1, 1, 4, 4); R(g, '#a85f6d', head + 2, 2, 2, 2); // ear
+    R(g, '#ff3b3b', head + 5, 6, 2, 2); R(g, '#ffc0c0', head + 5, 6, 1, 1); // glowing eye
+    g.fillStyle = 'rgba(220,210,200,0.6)';             // whiskers
+    g.fillRect(head + 10, 9, 5, 1); g.fillRect(head + 9, 11, 5, 1);
+  }
+
+  function paintGhoul(g, w, h, step, now) {
+    const SKIN = '#9fb58a', SKIN_SH = '#7f9570', SKIN_DK = '#62744f';
+    const CLOTH = '#4a3b2e', CLOTH_DK = '#33281f', PANTS = '#3a3230';
+    const sway = Math.sin(now / 300) * 1.5;
+    // back arm, reaching
+    R(g, SKIN_DK, 2, 19 + sway, 13, 3); R(g, SKIN_DK, 15, 18 + sway, 3, 1); R(g, SKIN_DK, 15, 21 + sway, 3, 1);
+    // legs: one trouser leg torn away
+    R(g, PANTS, -7 + step, h - 19, 6, 17); R(g, '#2a2422', -7 + step, h - 19, 2, 17);
+    R(g, PANTS, 1 - step, h - 19, 6, 9); R(g, SKIN_SH, 1 - step, h - 10, 6, 8);
+    R(g, '#2e2a26', -8 + step, h - 3, 8, 3); R(g, '#2e2a26', 0 - step, h - 3, 8, 3);
+    // torso: torn shirt with ribs showing through
+    R(g, CLOTH, -8, 17, 16, h - 35);
+    R(g, CLOTH_DK, -8, 17, 3, h - 35);
+    R(g, SKIN, 0, 22, 6, 8);
+    for (let i = 0; i < 3; i++) R(g, SKIN_DK, 0, 23 + i * 3, 6, 1);
+    R(g, CLOTH_DK, -3, h - 20, 2, 2); R(g, CLOTH_DK, 3, h - 21, 3, 1);
+    for (let i = 0; i < 4; i++) R(g, CLOTH, -8 + i * 4, h - 18, 2, 2 + (i % 2)); // ragged hem
+    // head, pushed forward with a hunch
+    R(g, SKIN_SH, -1, 15, 5, 3);                        // neck
+    R(g, SKIN, -5, 2, 14, 14); R(g, SKIN, -4, 1, 12, 1);
+    R(g, SKIN_SH, -5, 2, 3, 14);
+    R(g, '#2e2a26', -4, 1, 2, 3); R(g, '#2e2a26', 1, 0, 1, 3); R(g, '#2e2a26', 4, 1, 1, 2); // patchy hair
+    R(g, SKIN_DK, 4, 6, 5, 3);                          // sunken eye socket
+    R(g, '#e8ff7a', 5, 7, 3, 1); R(g, '#fbffd0', 6, 7, 1, 1); // glowing eye
+    R(g, '#1e1a16', 3, 12, 6, 3);                       // open jaw
+    R(g, '#e8e2c8', 4, 12, 1, 1); R(g, '#e8e2c8', 7, 12, 1, 1);
+    R(g, SKIN_SH, 9, 9, 1, 2);                          // nose stub
+    // front arm, reaching, with long fingers
+    R(g, SKIN, 3, 21 - sway, 14, 3); R(g, SKIN_SH, 3, 23 - sway, 14, 1);
+    R(g, SKIN, 17, 20 - sway, 4, 1); R(g, SKIN, 17, 22 - sway, 4, 1); R(g, SKIN, 17, 24 - sway, 3, 1);
+  }
+
+  function paintCrawler(g, w, h, step, now, e) {
+    const SK = '#ddd8cc', SH = '#aaa396', DK = '#7f786c', HI = '#f2efe6';
+    const L = -w / 2, jaw = e.fleeing ? 0 : (Math.sin(now / 120) + 1) * 1.2;
+    // far limbs (darker)
+    R(g, DK, L + 2 - step, h - 13, 3, 6); R(g, DK, L + 4 - step, h - 8, 3, 8);   // back leg
+    R(g, DK, w / 2 - 7 + step, h - 16, 3, 16);                                   // front arm
+    // body: arched back with a bony spine
+    R(g, SK, L, h - 22, w - 5, 10);
+    R(g, SK, L + 3, h - 26, w - 12, 4);
+    R(g, HI, L + 4, h - 26, w - 14, 1);
+    for (let i = 0; i < 5; i++) R(g, SH, L + 4 + i * 3, h - 27, 2, 2);         // vertebrae
+    for (let i = 0; i < 4; i++) R(g, SH, L + 8 + i * 3, h - 19, 1, 6);         // ribs
+    R(g, SH, L, h - 13, w - 5, 1);
+    // head: low and forward, eyeless
+    R(g, SK, w / 2 - 9, h - 31, 11, 10); R(g, SK, w / 2 - 8, h - 32, 8, 1);
+    R(g, HI, w / 2 - 7, h - 31, 5, 1);
+    R(g, SH, w / 2 - 9, h - 31, 2, 10);
+    R(g, '#0c0b0a', w / 2 - 2, h - 28, 3, 3);                                    // empty eye socket
+    R(g, '#0c0b0a', w / 2 - 3, h - 23 + jaw * 0.3, 6, 1 + jaw);                  // gaping mouth
+    R(g, '#e8e2c8', w / 2 - 2, h - 23, 1, 1); R(g, '#e8e2c8', w / 2 + 1, h - 23, 1, 1);
+    // near limbs: bent hind leg and a long clawed arm
+    R(g, SK, L + 5 + step, h - 14, 3, 6); R(g, SK, L + 3 + step, h - 8, 3, 8);
+    R(g, SK, w / 2 - 3 - step, h - 17, 3, 17);
+    R(g, SH, w / 2 - 3 - step, h - 17, 1, 17);
+    R(g, '#2a2622', w / 2 - step, h - 1, 3, 1); R(g, '#2a2622', L + 2 + step, h - 1, 3, 1); // claws
+  }
+
   function drawPlayer(cx, cy) {
-    if (iframes > 0 && Math.floor(performance.now() / 80) % 2) return; // blink after being hit
     const px = Math.round(player.x * TILE - cx), py = Math.round(player.y * TILE - cy);
     const w = Math.round(player.w * TILE), h = Math.round(player.h * TILE);
-    const f = player.face;
+    if (player.onGround) groundShadow(px + w / 2, py + h, w / 2 + 3);
+    if (iframes > 0 && Math.floor(performance.now() / 80) % 2) return; // blink after being hit
+    const now = performance.now();
     const swing = Math.sin(player.walk) * 4;
-    ctx.save();
-    ctx.translate(px + w / 2, py);
-    ctx.scale(f, 1);
-    const SKIN = '#f0c6a0', BLACK = '#18181c';
-    const l1 = -7 + swing * 0.5, l2 = 1 - swing * 0.5;
-    // legs: black shorts over bare legs, black trainers with white soles
-    for (const lx of [l1, l2]) {
-      ctx.fillStyle = SKIN;
-      ctx.fillRect(lx, h - 12, 6, 9);
-      ctx.fillStyle = BLACK;
-      ctx.fillRect(lx, h - 19, 6, 8);
-      ctx.fillStyle = '#0e0e10';
-      ctx.fillRect(lx, h - 4, 8, 3);
-      ctx.fillStyle = '#e8e8e8';
-      ctx.fillRect(lx, h - 1, 8, 1);
-    }
-    // body: black vest with bare shoulders
-    ctx.fillStyle = BLACK;
-    ctx.fillRect(-8, 17, 16, h - 35);
-    ctx.fillStyle = SKIN;
-    ctx.fillRect(-8, 17, 3, 3);
-    ctx.fillRect(5, 17, 3, 3);
-    ctx.fillStyle = '#2c2c32';
-    ctx.fillRect(-4, 17, 8, 1);
-    // head: completely bald with a shiny scalp
-    ctx.fillStyle = SKIN;
-    ctx.fillRect(-7, 2, 14, 15);
-    ctx.fillRect(-6, 0, 12, 2);
-    ctx.fillStyle = '#fbe0c6';
-    ctx.fillRect(-3, 2, 5, 2);
-    ctx.fillStyle = '#dca07a';
-    ctx.fillRect(-5, 8, 2, 4);
-    // eye and ginger eyebrow
-    ctx.fillStyle = '#1b1b1d';
-    ctx.fillRect(4, 8, 2, 2);
-    ctx.fillStyle = '#b5561f';
-    ctx.fillRect(3, 6, 4, 1);
-    // small ginger beard along the jaw and chin
-    ctx.fillStyle = '#c8622a';
-    ctx.fillRect(-3, 13, 11, 3);
-    ctx.fillRect(0, 16, 7, 2);
-    ctx.fillRect(2, 12, 5, 1);
-    ctx.fillStyle = '#a44e1f';
-    ctx.fillRect(1, 17, 5, 1);
-    ctx.fillStyle = '#6e2c10';
-    ctx.fillRect(4, 13, 3, 1);
-    // arm, swinging while mining
-    const mSwing = mining.t > 0 ? Math.sin(performance.now() / 60) * 0.6 : player.swing > 0 ? -1.2 + player.swing * 8 : 0;
-    ctx.translate(0, 20);
-    ctx.rotate(-0.3 + mSwing - swing * 0.03);
-    ctx.fillStyle = SKIN;
-    ctx.fillRect(-2, 0, 5, 16);
-    const it = held();
-    if (it) ctx.drawImage(ICON[it.id], -2, 6, 18, 18);
-    ctx.restore();
+    const idle = !player.walk && player.onGround;
+    const bob = idle ? Math.round((Math.sin(now / 600) + 1) / 2) : 0; // breathing
+    const blink = now % 3600 < 130;
+    const armRot = -0.3 + (mining.t > 0 ? Math.sin(now / 60) * 0.6 : player.swing > 0 ? -1.2 + player.swing * 8 : 0) - swing * 0.03;
+    drawSprite(px + w / 2, py, player.face, 0, g => {
+      const SKIN = '#f0c6a0', SKIN_SH = '#d9a57e', SKIN_DK = '#c08a64', SKIN_HI = '#fbe0c6';
+      const VEST = '#1b1b20', VEST_HI = '#2f2f37', SHORTS = '#141418';
+      const BEARD = '#c8622a', BEARD_SH = '#a44e1f', BEARD_HI = '#e07a3a';
+      // back arm swings opposite the legs
+      g.save();
+      g.translate(-3, 20 + bob);
+      g.rotate(0.25 + swing * 0.06);
+      R(g, SKIN_SH, -2, 0, 5, 14); R(g, SKIN_DK, -2, 12, 5, 3);
+      g.restore();
+      // legs: back leg darker
+      const legs = [[1 - swing * 0.5, true], [-7 + swing * 0.5, false]];
+      for (const [lx, back] of legs) {
+        R(g, back ? SKIN_SH : SKIN, lx, h - 12, 6, 8);
+        R(g, back ? SKIN_DK : SKIN_SH, lx, h - 12, 1, 8);
+        R(g, back ? '#0c0c0f' : SHORTS, lx, h - 19, 7, 8);
+        R(g, '#26262c', lx + 5, h - 19, 1, 8);
+        R(g, '#0e0e10', lx, h - 5, 9, 4);                  // trainer
+        R(g, '#34343c', lx + 2, h - 5, 4, 1);              // laces
+        R(g, '#e8e8e8', lx, h - 1, 9, 1);                  // white sole
+      }
+      // torso: black vest with bare shoulders and a v-neck
+      R(g, VEST, -8, 17 + bob, 16, h - 35 - bob);
+      R(g, VEST_HI, 4, 19 + bob, 2, h - 38 - bob);
+      R(g, '#101014', -8, 17 + bob, 2, h - 35 - bob);
+      R(g, SKIN, -8, 17 + bob, 3, 3); R(g, SKIN, 5, 17 + bob, 3, 3);
+      R(g, SKIN_SH, -1, 17 + bob, 5, 3); R(g, SKIN_SH, 0, 20 + bob, 3, 1);
+      // neck
+      R(g, SKIN_SH, -2, 15 + bob, 6, 3);
+      // head: bald and round, lit from the front
+      const hy = bob;
+      R(g, SKIN, -6, hy, 12, 1); R(g, SKIN, -7, 1 + hy, 14, 15); R(g, SKIN, -6, 16 + hy, 12, 1);
+      R(g, SKIN_SH, -7, 2 + hy, 2, 13);                   // back of the head in shadow
+      R(g, SKIN_HI, -2, 1 + hy, 5, 2); R(g, '#fff1e2', -1, 1 + hy, 2, 1); // scalp shine
+      R(g, SKIN_DK, -4, 7 + hy, 3, 5); R(g, SKIN_SH, -3, 8 + hy, 1, 3);   // ear
+      R(g, SKIN, 7, 8 + hy, 1, 3);                        // nose
+      // eye and ginger eyebrow
+      if (blink) R(g, SKIN_DK, 3, 9 + hy, 3, 1);
+      else { R(g, '#f4efe6', 3, 8 + hy, 3, 2); R(g, '#2a1c14', 5, 8 + hy, 1, 2); }
+      R(g, BEARD_SH, 2, 6 + hy, 5, 1);
+      // small ginger beard along the jaw, with texture
+      R(g, BEARD, -3, 13 + hy, 11, 3); R(g, BEARD, 0, 16 + hy, 7, 2); R(g, BEARD, 3, 12 + hy, 5, 1);
+      R(g, BEARD_SH, 1, 17 + hy, 5, 1); R(g, BEARD_SH, -3, 15 + hy, 3, 1);
+      for (const [bx, by] of [[-1, 13], [2, 14], [5, 13], [3, 16], [6, 15]]) R(g, BEARD_HI, bx, by + hy, 1, 1);
+      R(g, '#6e2c10', 4, 14 + hy, 3, 1);                  // mouth
+      // front arm, swinging while mining or fighting, holding the selected item
+      g.save();
+      g.translate(0, 20 + bob);
+      g.rotate(armRot);
+      R(g, SKIN, -2, 0, 5, 16); R(g, SKIN_SH, -2, 0, 1, 16); R(g, SKIN_HI, 2, 2, 1, 6);
+      R(g, SKIN_SH, -2, 13, 5, 3);
+      const it = held();
+      if (it) g.drawImage(ICON[it.id], -2, 6, 18, 18);
+      g.restore();
+    });
   }
 
   // ---------- UI ----------
@@ -2061,7 +2188,40 @@
     newBtn.textContent = 'New world';
     newWorld();
     save();
-    toast('A new world has been generated');
+    showStory(false);
+  });
+
+  // ---------- New-world story ----------
+  const REGIONS = ['Ashfall Flats', 'The Rust Basin', 'Cinder Reach', 'Hollow Mile', 'The Glass Wastes',
+    'Dustbowl Sector', 'Old Meridian', 'The Scorched Rise', 'Greywater Ruins', 'Fallout Ridge'];
+  const storyEl = document.getElementById('story');
+  let helpAfterStory = false;
+  function showStory(firstLaunch) {
+    const d = worldInfo;
+    document.getElementById('story-region').textContent = REGIONS[Math.abs(seed) % REGIONS.length];
+    const facts = [
+      ['Supply chests detected', chests.length],
+      ['Ruined buildings', d.ruins],
+      ['Blast craters', d.craters],
+      ['Oak trees still standing', d.oaks],
+    ];
+    const list = document.getElementById('story-facts');
+    list.replaceChildren(...facts.map(([k, v]) => {
+      const row = document.createElement('div');
+      const dt = document.createElement('dt'); dt.textContent = k;
+      const dd = document.createElement('dd'); dd.textContent = v;
+      row.append(dt, dd);
+      return row;
+    }));
+    helpAfterStory = firstLaunch;
+    helpEl.hidden = true;
+    storyEl.hidden = false;
+    document.getElementById('story-go').focus({ preventScroll: true });
+  }
+  document.getElementById('story-go').addEventListener('click', () => {
+    storyEl.hidden = true;
+    if (helpAfterStory) helpEl.hidden = false;
+    sfx.click();
   });
 
   // ---------- Save / load ----------
@@ -2128,7 +2288,7 @@
     buildIcons();
     const restored = (data && deserialize(data)) || load();
     if (restored) { computeLight(); snapCamera(); helpEl.hidden = true; }
-    else newWorld();
+    else { newWorld(); showStory(true); }
     try { window.claude?.hot?.snapshot?.(() => serialize()); } catch { /* optional */ }
 
     let last = performance.now();
