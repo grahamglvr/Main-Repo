@@ -64,7 +64,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   pointer-events: none;
 }
 #hud-top > * { pointer-events: auto; }
-#goal { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; max-width: 34ch; }
+#goal { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; max-width: 30ch; }
 #menu { display: flex; gap: 6px; padding: 6px; flex-wrap: wrap; }
 #menu button { font-size: 14px; }
 #btn-new.confirm { border-color: var(--bad); color: var(--bad); }
@@ -121,17 +121,19 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .bar { display: grid; grid-template-columns: 7.5ch 1fr 7ch; align-items: center; gap: 8px; }
 .bar .label { font-size: 11px; }
 .bar .track { height: 9px; background: #12181a; border: 1px solid var(--edge); border-radius: 2px; overflow: hidden; }
-#health-fill, #stamina-fill { height: 100%; width: 100%; }
+#health-fill, #stamina-fill, #hunger-fill { height: 100%; width: 100%; }
+#hunger-fill { background: linear-gradient(#e0a060, #b0692c); transition: width .25s; }
+#hunger-fill.low { background: linear-gradient(#ff8a5c, #d9432a); }
 #health-fill { background: linear-gradient(#e2566b, #b3263a); transition: width .25s; }
 #health-fill.low { background: linear-gradient(#ff8a5c, #d9432a); }
 #stamina-fill { background: linear-gradient(#f1d36a, #c9a032); }
 #stamina.empty .track { animation: tired .4s 2; }
 @keyframes tired { 50% { border-color: var(--bad); background: #3a1a18; } }
-#health-text, #stamina-text { font-size: 13px; font-variant-numeric: tabular-nums; text-align: right; }
+#health-text, #stamina-text, #hunger-text { font-size: 13px; font-variant-numeric: tabular-nums; text-align: right; }
 
 #toast {
   position: fixed; left: 50%; transform: translateX(-50%);
-  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 88px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 108px);
   padding: 6px 12px; border-radius: 4px;
   background: var(--panel); border: 2px solid var(--edge);
   opacity: 0; transition: opacity .2s; pointer-events: none;
@@ -177,7 +179,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 
 #touch {
   position: fixed; left: 16px; right: 16px;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 86px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 106px);
   display: flex; justify-content: space-between; pointer-events: none;
 }
 #touch .pad { display: flex; gap: 8px; pointer-events: auto; }
@@ -216,11 +218,27 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .tip-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 #help .intro { color: var(--text); }
 
+/* Key prompts beside the crosshair and above the player */
+.keyprompt {
+  position: fixed; left: 0; top: 0; z-index: 5; pointer-events: none;
+  display: flex; flex-direction: column; gap: 3px;
+  font: 600 13px var(--font-ui); letter-spacing: .02em; color: var(--text);
+  text-shadow: 0 1px 0 #000, 0 0 3px #000;
+  white-space: nowrap;
+}
+#coach { flex-direction: row; gap: 10px; padding: 4px 8px; border-radius: 4px; background: rgb(15 20 21 / .72); border: 1px solid var(--edge); text-shadow: none; }
+.keyprompt .pr { display: flex; align-items: center; gap: 4px; }
+.keyprompt kbd {
+  display: inline-block; min-width: 1.4em; padding: 1px 5px; text-align: center;
+  font: 700 11px var(--font-ui); letter-spacing: .04em; color: var(--ink); text-shadow: none;
+  background: linear-gradient(#f4ecd6, #d9cba5); border: 1px solid #8a7a52; border-bottom-width: 3px; border-radius: 4px;
+}
+
 /* Tips beside the goal */
 .hud-left { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
 #tips {
   display: flex; flex-direction: column; gap: 2px; align-items: flex-start; text-align: left;
-  padding: 6px 10px; max-width: 34ch; cursor: pointer;
+  padding: 6px 10px; max-width: 30ch; cursor: pointer;
   font: 15px/1.4 "Barlow", system-ui, sans-serif; letter-spacing: 0;
   color: var(--muted); background: color-mix(in srgb, var(--panel) 80%, transparent);
 }

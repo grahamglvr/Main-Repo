@@ -28,7 +28,10 @@ python3 -m http.server 8000
 | 1–9 / mouse wheel | Pick a hotbar slot |
 | E | Inventory and crafting |
 | M | Sound on or off |
+| K | Show or hide key prompts |
 | H | Show or hide the controls |
+
+Key prompts show what to press: beside the crosshair for what the mouse will do (mine, chop, place, open, attack, shoot, eat), and above your character for movement, ladders and crafting stations. First-time prompts disappear once you've used that control.
 
 On touch screens, on-screen buttons appear. Tap the **Mine / Build** button to switch what a tap on the world does.
 
@@ -47,7 +50,7 @@ Every item belongs to a category, shown as a coloured corner on inventory slots 
 | Category | Examples |
 | --- | --- |
 | Equipment | pickaxes, hatchets, daggers, bows, arrows |
-| Health | berries (+10), cooked meat (+25), bandages (+30) |
+| Health | berries (+10 health, +15 food), cooked meat (+25 health, +40 food), bandages (+30 health) |
 | Resources | logs, oak logs, sticks, fibre, string, rope, coal, iron, scrap metal, raw meat |
 | Building | dirt, planks, cobblestone, bricks, glass, torches, ladders, workbench, furnace |
 
@@ -66,6 +69,7 @@ Leaves and bushes drop fibre. Each piece of fibre has a 50% chance of coming wit
 - **Crawlers** are pale, blind cave dwellers that spawn deep underground in the dark. They run from fire: placed torches, campfires and furnaces, or a torch in your hand.
 - Rats drop raw meat. Cook it on a **Campfire** (3 logs, 2 sticks) or in a furnace. Ghouls and crawlers drop string and rope.
 - You also have **100 stamina**. Jumps (8), each tool swing (2), dagger hits (8) and bow shots (10) use it; walking doesn't. It refills after you rest for about a second.
+- Your **food** bar drains slowly (a full stomach lasts about 20 minutes). At 0 you start starving and lose 2 health every 4 seconds. Raw meat gives +10 food but makes you sick; cook it first.
 - At 0 health you wake up back at the start and keep your items.
 
 You can only mine blocks you can see: if a solid block sits between you and the target, the outline turns red and you have to clear the way first.

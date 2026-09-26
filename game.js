@@ -103,9 +103,9 @@
     fibre: { name: 'Fibre', cat: 'Resources' },
     string: { name: 'String', cat: 'Resources' },
     rope: { name: 'Rope', cat: 'Resources' },
-    raw_meat: { name: 'Raw Meat', cat: 'Resources' },
-    berries: { name: 'Berries', heal: 10, cat: 'Health' },
-    cooked_meat: { name: 'Cooked Meat', heal: 25, cat: 'Health' },
+    raw_meat: { name: 'Raw Meat', food: 10, sick: 5, cat: 'Resources' },
+    berries: { name: 'Berries', heal: 10, food: 15, cat: 'Health' },
+    cooked_meat: { name: 'Cooked Meat', heal: 25, food: 40, cat: 'Health' },
     bandage: { name: 'Bandage', heal: 30, cat: 'Health' },
     wood_pick: { name: 'Wooden Pickaxe', tool: 'pick', tier: 1, speed: 2.5 },
     stone_pick: { name: 'Stone Pickaxe', tool: 'pick', tier: 2, speed: 4.5 },
@@ -137,7 +137,8 @@
     if (it.melee) return `Melee damage ${it.melee}`;
     if (it.bow) return `Shoots arrows${it.bonus ? ` · +${it.bonus} damage` : ''}`;
     if (it.arrow) return `Arrow damage ${it.arrow}`;
-    if (it.heal) return `Heals ${it.heal} · right click to use`;
+    if (it.sick) return `+${it.food} food, but eating it raw hurts ${it.sick} · cook it first`;
+    if (it.heal || it.food) return [it.heal && `Heals ${it.heal}`, it.food && `+${it.food} food`].filter(Boolean).join(' · ') + ' · right click to use';
     if (it.block) return 'Right click to place';
     return '';
   }
@@ -740,7 +741,7 @@
   }
 
   // ---------- Player ----------
-  const player = { x: 0, y: 0, w: 0.7, h: 1.7, vx: 0, vy: 0, onGround: false, face: 1, walk: 0, hp: 100, st: 100, kb: 0, swing: 0 };
+  const player = { x: 0, y: 0, w: 0.7, h: 1.7, vx: 0, vy: 0, onGround: false, face: 1, walk: 0, hp: 100, st: 100, food: 100, kb: 0, swing: 0 };
   function spawn() {
     const x = Math.floor(W / 2);
     let y = 0;
@@ -997,11 +998,14 @@
   const invOpen = () => !invEl.hidden;
   window.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
-    if (k === 'e') { toggleInv(); e.preventDefault(); return; }
+    if (k === 'e') { learned('inventory'); toggleInv(); e.preventDefault(); return; }
+    if (k === 'k') { togglePrompts(); return; }
     if (k === 'escape') { if (invOpen()) toggleInv(false); helpEl.hidden = true; return; }
     if (k === 'h') { helpEl.hidden = !helpEl.hidden; return; }
     if (k === 'm') { toggleSound(); return; }
-    if (k >= '1' && k <= '9') { selected = +k - 1; uiDirty = true; return; }
+    if (k >= '1' && k <= '9') { selected = +k - 1; uiDirty = true; learned('hotbar'); return; }
+    if (k === 'a' || k === 'd' || k === 'arrowleft' || k === 'arrowright') learned('walk');
+    if (k === ' ' || k === 'w' || k === 'arrowup') learned('jump');
     keys[k] = true;
     if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
   });
@@ -1031,6 +1035,7 @@
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
     selected = (selected + (e.deltaY > 0 ? 1 : -1) + 9) % 9;
+    learned('hotbar');
     uiDirty = true;
   }, { passive: false });
 
@@ -1174,18 +1179,39 @@
       spawn();
       player.hp = MAX_HP;
       player.st = MAX_ST;
+      player.food = Math.max(player.food, 60);
       enemies = []; arrows = [];
       iframes = 2;
       snapCamera();
       toast('You passed out and woke up back at the start. You kept your items.');
     }
   }
+  // Food and medicine: `heal` restores health, `food` fills hunger, `sick` hurts (raw meat).
   function eat(it) {
-    if (player.hp >= MAX_HP) { toast('Your health is already full'); return; }
+    const f = ITEM[it.id];
+    const helps = (f.heal && player.hp < MAX_HP) || (f.food && player.food < MAX_FOOD);
+    if (!helps) { toast(f.food ? "You're not hungry and your health is full" : 'Your health is already full'); return; }
     removeItem(it.id, 1);
-    heal(ITEM[it.id].heal);
     sfx.eat();
-    toast(`+${ITEM[it.id].heal} health`);
+    const parts = [];
+    if (f.heal) { heal(f.heal); parts.push(`+${f.heal} health`); }
+    if (f.food) { player.food = Math.min(MAX_FOOD, player.food + f.food); parts.push(`+${f.food} food`); }
+    toast(parts.join(', '));
+    if (f.sick) { hurt(f.sick); toast(`Raw meat made you sick. Cook it on a Campfire first. (${parts.join(', ')})`); }
+  }
+
+  // ---------- Hunger ----------
+  // Hunger drains slowly: a full stomach lasts about 20 minutes. Starving hurts.
+  const MAX_FOOD = 100, FOOD_DRAIN = MAX_FOOD / (20 * 60), STARVE_EVERY = 4, STARVE_DMG = 2;
+  let starveT = 0, hungerWarned = false;
+  function updateHunger(dt) {
+    player.food = Math.max(0, player.food - FOOD_DRAIN * dt);
+    if (player.food < 20 && !hungerWarned) { toast("You're getting hungry. Eat berries or cooked meat."); hungerWarned = true; }
+    if (player.food >= 30) hungerWarned = false;
+    if (player.food <= 0) {
+      starveT -= dt;
+      if (starveT <= 0) { starveT = STARVE_EVERY; hurt(STARVE_DMG); toast("You're starving. Eat something."); }
+    } else starveT = STARVE_EVERY;
   }
 
   // ---------- Enemies and combat ----------
@@ -1509,7 +1535,7 @@
       }
     } else mining.t = 0;
 
-    const food = held() && ITEM[held().id].heal;
+    const food = held() && (ITEM[held().id].heal || ITEM[held().id].food);
     if (mouse.right && !invOpen() && t.visible && get(t.tx, t.ty) === B.CHEST && placeCooldown <= 0) {
       placeCooldown = 0.4;
       openChest(t.tx, t.ty);
@@ -1531,6 +1557,7 @@
     }
 
     updateStamina(dt);
+    updateHunger(dt);
     updateEnemies(dt);
     updateArrows(dt);
     updateAsh(dt);
@@ -2006,31 +2033,41 @@
     const armRot = -0.3 + (mining.t > 0 ? Math.sin(now / 60) * 0.6 : player.swing > 0 ? -1.2 + player.swing * 8 : 0) - swing * 0.03;
     drawSprite(px + w / 2, py, player.face, 0, g => {
       const SKIN = '#f0c6a0', SKIN_SH = '#d9a57e', SKIN_DK = '#c08a64', SKIN_HI = '#fbe0c6';
-      const VEST = '#1b1b20', VEST_HI = '#2f2f37', SHORTS = '#141418';
+      // Bunker-issue work gear: orange bib overalls with grey straps and panels over a grey shirt
+      const OR = '#e0772a', OR_SH = '#b85a1c', OR_DK = '#9a4a16', OR_HI = '#f39a4e';
+      const GREY = '#8a9096', GREY_SH = '#6a7076', GREY_DK = '#4a5056', GREY_HI = '#b4babf';
       const BEARD = '#c8622a', BEARD_SH = '#a44e1f', BEARD_HI = '#e07a3a';
       // back arm swings opposite the legs
       g.save();
       g.translate(-3, 20 + bob);
       g.rotate(0.25 + swing * 0.06);
-      R(g, SKIN_SH, -2, 0, 5, 14); R(g, SKIN_DK, -2, 12, 5, 3);
+      R(g, SKIN_SH, -2, 5, 5, 9); R(g, SKIN_DK, -2, 12, 5, 3);
+      R(g, GREY_SH, -2, 0, 5, 5);                           // short grey sleeve
       g.restore();
       // legs: back leg darker
       const legs = [[1 - swing * 0.5, true], [-7 + swing * 0.5, false]];
       for (const [lx, back] of legs) {
-        R(g, back ? SKIN_SH : SKIN, lx, h - 12, 6, 8);
-        R(g, back ? SKIN_DK : SKIN_SH, lx, h - 12, 1, 8);
-        R(g, back ? '#0c0c0f' : SHORTS, lx, h - 19, 7, 8);
-        R(g, '#26262c', lx + 5, h - 19, 1, 8);
+        R(g, back ? OR_SH : OR, lx, h - 20, 7, 16);          // overall leg
+        R(g, back ? OR_DK : OR_SH, lx, h - 20, 1, 16);
+        if (!back) R(g, OR_HI, lx + 5, h - 19, 1, 12);
+        R(g, back ? GREY_SH : GREY, lx, h - 13, 7, 3);        // grey knee panel
+        R(g, back ? GREY_DK : GREY_HI, lx, h - 8, 7, 1);     // reflective stripe at the ankle
         R(g, '#0e0e10', lx, h - 5, 9, 4);                  // trainer
         R(g, '#34343c', lx + 2, h - 5, 4, 1);              // laces
         R(g, '#e8e8e8', lx, h - 1, 9, 1);                  // white sole
       }
-      // torso: black vest with bare shoulders and a v-neck
-      R(g, VEST, -8, 17 + bob, 16, h - 35 - bob);
-      R(g, VEST_HI, 4, 19 + bob, 2, h - 38 - bob);
-      R(g, '#101014', -8, 17 + bob, 2, h - 35 - bob);
-      R(g, SKIN, -8, 17 + bob, 3, 3); R(g, SKIN, 5, 17 + bob, 3, 3);
-      R(g, SKIN_SH, -1, 17 + bob, 5, 3); R(g, SKIN_SH, 0, 20 + bob, 3, 1);
+      // torso: grey shirt, orange bib, grey straps with buttons, and a grey chest pocket
+      R(g, GREY, -8, 17 + bob, 16, 6);
+      R(g, GREY_SH, -8, 17 + bob, 2, 6);
+      R(g, OR, -8, 22 + bob, 16, h - 40 - bob);
+      R(g, OR_SH, -8, 22 + bob, 2, h - 40 - bob);
+      R(g, OR_HI, 5, 23 + bob, 1, h - 43 - bob);
+      R(g, OR, -7, 19 + bob, 13, 4);                        // bib top
+      R(g, GREY_DK, -6, 17 + bob, 2, 5); R(g, GREY_DK, 3, 17 + bob, 2, 5); // straps
+      R(g, '#d8dde2', -6, 21 + bob, 2, 1); R(g, '#d8dde2', 3, 21 + bob, 2, 1); // buttons
+      R(g, GREY, -2, 23 + bob, 6, 5); R(g, GREY_DK, -2, 23 + bob, 6, 1); // pocket
+      R(g, OR_DK, -8, h - 21, 16, 1);                       // waist seam
+      R(g, SKIN_SH, -1, 17 + bob, 3, 1);                    // collar opening
       // neck
       R(g, SKIN_SH, -2, 15 + bob, 6, 3);
       // head: bald and round, lit from the front
@@ -2053,7 +2090,8 @@
       g.save();
       g.translate(0, 20 + bob);
       g.rotate(armRot);
-      R(g, SKIN, -2, 0, 5, 16); R(g, SKIN_SH, -2, 0, 1, 16); R(g, SKIN_HI, 2, 2, 1, 6);
+      R(g, SKIN, -2, 5, 5, 11); R(g, SKIN_SH, -2, 5, 1, 11); R(g, SKIN_HI, 2, 6, 1, 5);
+      R(g, GREY, -2, 0, 5, 5); R(g, GREY_SH, -2, 0, 1, 5); R(g, GREY_DK, -2, 5, 5, 1); // sleeve
       R(g, SKIN_SH, -2, 13, 5, 3);
       const it = held();
       if (it) g.drawImage(ICON_HAND[it.id], -1, 7, 16, 16);
@@ -2074,7 +2112,19 @@
   const staminaEl = document.getElementById('stamina');
   const staminaFill = document.getElementById('stamina-fill');
   const staminaText = document.getElementById('stamina-text');
-  let shownSt = -1;
+  let shownSt = -1, shownFood = -1;
+  const foodEl = document.getElementById('hunger');
+  const foodFill = document.getElementById('hunger-fill');
+  const foodText = document.getElementById('hunger-text');
+  function drawFoodBar() {
+    const v = Math.ceil(player.food);
+    if (v === shownFood) return;
+    shownFood = v;
+    foodFill.style.width = `${player.food}%`;
+    foodFill.classList.toggle('low', v <= 20);
+    foodText.textContent = `${v} / ${MAX_FOOD}`;
+    foodEl.setAttribute('aria-valuenow', v);
+  }
   // Stamina changes every frame, so its bar is updated on its own instead of re-rendering the whole HUD.
   function drawStaminaBar() {
     const v = Math.round(player.st);
@@ -2094,6 +2144,8 @@
     'Supply chests usually hold the next tier of gear up from what you carry.',
     'Walking is free, but jumping, swinging and fighting use stamina.',
     'Out of breath? Stop for a moment and your stamina refills.',
+    'Hunger drains slowly. Cooked meat fills you up far more than berries.',
+    'Raw meat fills you a little but makes you sick. Cook it first.',
     'Break bushes and leaves for fibre. Each piece might come with berries.',
     'Two fibre make a string. Two string make a rope.',
     'Scrap metal from the ruins can be smelted into iron: 3 scrap and 1 coal at a Furnace.',
@@ -2345,6 +2397,70 @@
     showStory(false);
   });
 
+  // ---------- Key prompts ----------
+  // Beside the crosshair: what the mouse buttons do right now.
+  // Above the player: movement, ladders, crafting stations, and first-time controls until they've been used.
+  const PROMPTS_KEY = 'blockstead-prompts';
+  const promptEl = document.getElementById('prompt'), coachEl = document.getElementById('coach');
+  let prompts = { on: true, learned: {} };
+  try { Object.assign(prompts, JSON.parse(localStorage.getItem(PROMPTS_KEY)) || {}); } catch { /* defaults */ }
+  const savePrompts = () => { try { localStorage.setItem(PROMPTS_KEY, JSON.stringify(prompts)); } catch { /* not saved */ } };
+  function learned(what) { if (!prompts.learned[what]) { prompts.learned[what] = true; savePrompts(); } }
+  function togglePrompts() {
+    prompts.on = !prompts.on;
+    savePrompts();
+    toast(prompts.on ? 'Key prompts on (K to hide)' : 'Key prompts off (K to show)');
+  }
+  const keycap = k => `<kbd>${k}</kbd>`;
+  const promptHTML = list => list.map(([keys, label]) => `<span class="pr">${[].concat(keys).filter(Boolean).map(keycap).join('')}<span>${label}</span></span>`).join('');
+  let lastPrompt = '', lastCoach = '';
+
+  function cursorPrompts() {
+    const list = [];
+    const it = held() && ITEM[held().id];
+    const t = targetTile();
+    const foe = enemyAtMouse();
+    if (it && it.bow) list.push(['Left click', ARROWS.some(a => count(a) > 0) ? 'Shoot' : 'Shoot (no arrows)']);
+    else if (foe && Math.hypot(centre(foe)[0] - centre(player)[0], centre(foe)[1] - centre(player)[1]) <= MELEE_REACH) list.push(['Left click', `Attack ${ENEMY[foe.type].name}`]);
+    else if (t.inReach) {
+      const b = get(t.tx, t.ty);
+      if (b === B.CHEST && t.visible) list.push(['Right click', 'Open chest']);
+      if (b !== B.AIR && b !== B.BEDROCK) {
+        if (!t.visible) list.push(['', 'Something is in the way']);
+        else list.push(['Left click', `${BLOCK[b].pref === 'axe' ? 'Chop' : 'Mine'} ${BLOCK[b].name}`]);
+      } else if (b === B.AIR && it && it.block && hasSupport(t.tx, t.ty)) list.push(['Right click', `Place ${it.name}`]);
+    }
+    if (it && (it.heal || it.food)) list.push(['Right click', it.id === 'bandage' ? 'Use bandage' : `Eat ${it.name}`]);
+    return list.slice(0, 2);
+  }
+  function coachPrompts() {
+    if (onClimbable()) return [[['W'], 'Climb'], [['S'], 'Down']];
+    const L = prompts.learned;
+    if (!L.walk) return [[['A', 'D'], 'Walk']];
+    if (!L.jump) return [[['Space'], 'Jump']];
+    const st = nearStations();
+    if (st.bench || st.furnace || st.campfire) return [[['E'], 'Craft']];
+    if (!L.inventory && inv.some(Boolean)) return [[['E'], 'Inventory and crafting']];
+    if (!L.hotbar && inv.slice(0, 9).filter(Boolean).length > 1) return [[['1–9'], 'Switch item']];
+    return [];
+  }
+  function updatePrompts() {
+    const blocked = !prompts.on || invOpen() || !helpEl.hidden || !storyEl.hidden;
+    const showCursor = !blocked && mouse.over && !mouse.touch;
+    const cHtml = showCursor ? promptHTML(cursorPrompts()) : '';
+    if (cHtml !== lastPrompt) { promptEl.innerHTML = cHtml; promptEl.hidden = !cHtml; lastPrompt = cHtml; }
+    if (cHtml) {
+      const x = Math.min(mouse.x + 18, viewW - promptEl.offsetWidth - 8), y = Math.min(mouse.y + 16, viewH - promptEl.offsetHeight - 8);
+      promptEl.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+    }
+    const kHtml = blocked || mouse.touch ? '' : promptHTML(coachPrompts());
+    if (kHtml !== lastCoach) { coachEl.innerHTML = kHtml; coachEl.hidden = !kHtml; lastCoach = kHtml; }
+    if (kHtml) {
+      const px = (player.x + player.w / 2) * TILE - camera.x, py = player.y * TILE - camera.y;
+      coachEl.style.transform = `translate(${Math.round(px - coachEl.offsetWidth / 2)}px, ${Math.round(py - coachEl.offsetHeight - 14)}px)`;
+    }
+  }
+
   // ---------- New-world story ----------
   const REGIONS = ['Ashfall Flats', 'The Rust Basin', 'Cinder Reach', 'Hollow Mile', 'The Glass Wastes',
     'Dustbowl Sector', 'Old Meridian', 'The Scorched Rise', 'Greywater Ruins', 'Fallout Ridge'];
@@ -2385,7 +2501,7 @@
     return {
       v: 1, seed, tiles: btoa(s),
       inv: inv.map(it => it && [it.id, it.n]),
-      p: [player.x, player.y], hp: player.hp, sel: selected, progress,
+      p: [player.x, player.y], hp: player.hp, food: player.food, sel: selected, progress,
     };
   }
   function deserialize(d) {
@@ -2403,6 +2519,7 @@
     progress = d.progress || {};
     scanChests();
     player.hp = typeof d.hp === 'number' ? d.hp : MAX_HP;
+    player.food = typeof d.food === 'number' ? d.food : MAX_FOOD;
     return true;
   }
   function save() {
@@ -2419,6 +2536,7 @@
     selected = 0;
     player.hp = MAX_HP;
     player.st = MAX_ST;
+    player.food = MAX_FOOD;
     spawn();
     enemies = []; arrows = []; floaters = [];
     spawnTimer = 30;
@@ -2455,6 +2573,8 @@
       if (invOpen() && Object.keys(nearStations()).join() !== lastStationKey) uiDirty = true;
       if (uiDirty) renderUI();
       drawStaminaBar();
+      drawFoodBar();
+      updatePrompts();
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);

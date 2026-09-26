@@ -41,11 +41,13 @@
     <dt>1–9 / wheel</dt><dd>Pick a hotbar slot</dd>
     <dt>E</dt><dd>Inventory and crafting</dd>
     <dt>M</dt><dd>Sound on or off</dd>
+    <dt>K</dt><dd>Show or hide key prompts</dd>
     <dt>H</dt><dd>Show or hide this panel</dd>
   </dl>
   <p>Pickaxes mine stone fastest and hatchets chop wood fastest, but either works on both. Oak needs a Stone Hatchet or better to chop quickly.</p>
   <p>Mutant rats and ghouls attack on contact. Deep underground, pale crawlers hunt in the dark, but they run from fire: carry a torch or stay near a campfire. Falling more than 4 blocks also hurts.</p>
   <p>Heal with berries, bandages, or raw meat cooked on a Campfire.</p>
+  <p>Your food bar drains slowly. Eat berries or cooked meat before it runs out, or you start to starve.</p>
   <p>Jumping, swinging tools and fighting use stamina. Walking doesn't. Pause for a moment and it refills.</p>
   <p>You can only mine blocks you can see. Clear anything in the way first.</p>
   <p>Some recipes need a Workbench or Furnace placed within 4 blocks of you.</p>
@@ -88,6 +90,11 @@
     <div class="track"><div id="stamina-fill"></div></div>
     <span id="stamina-text">100 / 100</span>
   </div>
+  <div id="hunger" class="bar" role="meter" aria-label="Food" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+    <span class="label">Food</span>
+    <div class="track"><div id="hunger-fill"></div></div>
+    <span id="hunger-text">100 / 100</span>
+  </div>
 </div>
 <div id="tip" class="panel" role="dialog" aria-labelledby="tip-title" hidden>
   <span class="label" id="tip-title">Upgrade your hatchet</span>
@@ -98,6 +105,8 @@
     <button id="tip-close" type="button">Keep chopping</button>
   </div>
 </div>
+<div id="prompt" class="keyprompt" aria-hidden="true" hidden></div>
+<div id="coach" class="keyprompt" aria-hidden="true" hidden></div>
 <div id="hotbar"></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
