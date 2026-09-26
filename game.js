@@ -41,16 +41,18 @@
     AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, COBBLE: 4, LOG: 5, LEAVES: 6, PLANK: 7,
     COAL_ORE: 8, IRON_ORE: 9, SAND: 10, BENCH: 11, FURNACE: 12, BRICK: 13,
     GLASS: 14, TORCH: 15, LADDER: 16, BEDROCK: 17, BUSH: 18,
+    OAK_LOG: 19, OAK_LEAVES: 20, CHEST: 21, SCRAP: 22, ASH: 23,
   };
   // hard: seconds to mine by hand. tier: tool tier needed (any pickaxe or hatchet counts).
   // pref: the tool that mines it at full speed ('pick' or 'axe'); other tools still help a little.
+  // fastTier: tools below this tier (and bare hands) are much slower on it.
   // cost: how much light drops passing through. sky: sunlight passes straight down through it.
   const BLOCK = [];
   function def(id, o) {
-    BLOCK[id] = Object.assign({ solid: true, hard: 1, tier: 0, pref: null, drop: null, light: 0, cost: 3, sky: false, climb: false }, o);
+    BLOCK[id] = Object.assign({ solid: true, hard: 1, tier: 0, fastTier: 0, pref: null, drop: null, dropN: 1, light: 0, cost: 3, sky: false, climb: false }, o);
   }
   def(B.AIR, { name: 'Air', solid: false, hard: 0, cost: 1, sky: true });
-  def(B.GRASS, { name: 'Grass', hard: 0.6, drop: 'dirt' });
+  def(B.GRASS, { name: 'Dry Grass', hard: 0.6, drop: 'dirt' });
   def(B.DIRT, { name: 'Dirt', hard: 0.5, drop: 'dirt' });
   def(B.STONE, { name: 'Stone', hard: 1.8, tier: 1, pref: 'pick', drop: 'cobble' });
   def(B.COBBLE, { name: 'Cobblestone', hard: 2, tier: 1, pref: 'pick', drop: 'cobble' });
@@ -68,12 +70,20 @@
   def(B.LADDER, { name: 'Ladder', solid: false, hard: 0.3, pref: 'axe', drop: 'ladder', cost: 1, sky: true, climb: true });
   def(B.BEDROCK, { name: 'Bedrock', hard: Infinity, tier: 99 });
   def(B.BUSH, { name: 'Bush', solid: false, hard: 0.4, pref: 'axe', cost: 1, sky: true });
+  // Oak: 5x tougher than a normal log, gives 2x the wood, and wants a stone hatchet or better.
+  def(B.OAK_LOG, { name: 'Oak Log', hard: 6.5, fastTier: 2, pref: 'axe', drop: 'oak_log', dropN: 2 });
+  def(B.OAK_LEAVES, { name: 'Oak Leaves', solid: false, hard: 0.3, pref: 'axe', cost: 2, sky: true });
+  def(B.CHEST, { name: 'Supply Chest', solid: false, hard: 1, pref: 'axe', cost: 1, sky: true });
+  def(B.SCRAP, { name: 'Scrap Metal', hard: 1.6, tier: 1, pref: 'pick', drop: 'scrap' });
+  def(B.ASH, { name: 'Ash', hard: 0.4, drop: 'dirt' });
 
   // ---------- Items ----------
+  // cat: Equipment, Health, Resources or Building.
+  const CATS = ['Equipment', 'Health', 'Resources', 'Building'];
   const ITEM = {
     dirt: { name: 'Dirt', block: B.DIRT },
     cobble: { name: 'Cobblestone', block: B.COBBLE },
-    log: { name: 'Log', block: B.LOG },
+    log: { name: 'Log', block: B.LOG, cat: 'Resources' },
     plank: { name: 'Planks', block: B.PLANK },
     sand: { name: 'Sand', block: B.SAND },
     bench: { name: 'Workbench', block: B.BENCH },
@@ -82,37 +92,91 @@
     glass: { name: 'Glass', block: B.GLASS },
     torch: { name: 'Torch', block: B.TORCH },
     ladder: { name: 'Ladder', block: B.LADDER },
-    iron_ore: { name: 'Iron Ore', block: B.IRON_ORE },
-    stick: { name: 'Stick' },
-    coal: { name: 'Coal' },
-    iron_ingot: { name: 'Iron Ingot' },
-    fibre: { name: 'Fibre' },
-    berries: { name: 'Berries', heal: 10 },
-    wood_pick: { name: 'Wooden Pickaxe', tool: 'pick', tier: 1, speed: 2.5, stack: 1 },
-    stone_pick: { name: 'Stone Pickaxe', tool: 'pick', tier: 2, speed: 4.5, stack: 1 },
-    iron_pick: { name: 'Iron Pickaxe', tool: 'pick', tier: 3, speed: 7, stack: 1 },
-    wood_axe: { name: 'Wooden Hatchet', tool: 'axe', tier: 1, speed: 2.5, stack: 1 },
-    stone_axe: { name: 'Stone Hatchet', tool: 'axe', tier: 2, speed: 4.5, stack: 1 },
-    iron_axe: { name: 'Iron Hatchet', tool: 'axe', tier: 3, speed: 7, stack: 1 },
+    iron_ore: { name: 'Iron Ore', block: B.IRON_ORE, cat: 'Resources' },
+    oak_log: { name: 'Oak Log', iconBlock: B.OAK_LOG, cat: 'Resources' },
+    stick: { name: 'Stick', cat: 'Resources' },
+    coal: { name: 'Coal', cat: 'Resources' },
+    iron_ingot: { name: 'Iron Ingot', cat: 'Resources' },
+    scrap: { name: 'Scrap Metal', iconBlock: B.SCRAP, cat: 'Resources' },
+    fibre: { name: 'Fibre', cat: 'Resources' },
+    string: { name: 'String', cat: 'Resources' },
+    rope: { name: 'Rope', cat: 'Resources' },
+    raw_meat: { name: 'Raw Meat', cat: 'Resources' },
+    berries: { name: 'Berries', heal: 10, cat: 'Health' },
+    cooked_meat: { name: 'Cooked Meat', heal: 25, cat: 'Health' },
+    bandage: { name: 'Bandage', heal: 30, cat: 'Health' },
+    wood_pick: { name: 'Wooden Pickaxe', tool: 'pick', tier: 1, speed: 2.5 },
+    stone_pick: { name: 'Stone Pickaxe', tool: 'pick', tier: 2, speed: 4.5 },
+    iron_pick: { name: 'Iron Pickaxe', tool: 'pick', tier: 3, speed: 7 },
+    wood_axe: { name: 'Wooden Hatchet', tool: 'axe', tier: 1, speed: 2.5 },
+    stone_axe: { name: 'Stone Hatchet', tool: 'axe', tier: 2, speed: 4.5 },
+    iron_axe: { name: 'Iron Hatchet', tool: 'axe', tier: 3, speed: 7 },
+    wood_dagger: { name: 'Wooden Dagger', melee: 8 },
+    stone_dagger: { name: 'Stone Dagger', melee: 12 },
+    iron_dagger: { name: 'Iron Dagger', melee: 18 },
+    wood_bow: { name: 'Shortbow', bow: 16, bonus: 0 },
+    oak_bow: { name: 'Oak Shortbow', bow: 20, bonus: 4 },
+    iron_bow: { name: 'Iron-bound Bow', bow: 24, bonus: 8 },
+    wood_arrow: { name: 'Wooden Arrows', arrow: 6, tip: '#b0844c' },
+    stone_arrow: { name: 'Stone Arrows', arrow: 10, tip: '#8b8d93' },
+    iron_arrow: { name: 'Iron Arrows', arrow: 15, tip: '#e1e3e8' },
   };
+  for (const id in ITEM) {
+    const it = ITEM[id];
+    if (!it.cat) it.cat = it.tool || it.melee || it.bow || it.arrow ? 'Equipment' : 'Building';
+    if (it.tool || it.melee || it.bow) it.stack = 1;
+  }
+  const ARROWS = ['iron_arrow', 'stone_arrow', 'wood_arrow']; // best first
   const tierName = t => ['your hands', 'a wooden tool', 'a stone tool', 'an iron tool'][t] || 'something stronger';
+  // One-line summary shown in tooltips and the crafting list.
+  function describe(id) {
+    const it = ITEM[id];
+    if (it.tool) return `Tier ${it.tier} · fastest on ${it.tool === 'axe' ? 'wood' : 'stone and ore'}`;
+    if (it.melee) return `Melee damage ${it.melee}`;
+    if (it.bow) return `Shoots arrows${it.bonus ? ` · +${it.bonus} damage` : ''}`;
+    if (it.arrow) return `Arrow damage ${it.arrow}`;
+    if (it.heal) return `Heals ${it.heal} · right click to use`;
+    if (it.block) return 'Right click to place';
+    return '';
+  }
 
   const RECIPES = [
+    // Resources
     { out: 'plank', n: 4, needs: { log: 1 } },
+    { out: 'plank', n: 4, needs: { oak_log: 1 } },
     { out: 'stick', n: 4, needs: { plank: 2 } },
+    { out: 'string', n: 1, needs: { fibre: 2 } },
+    { out: 'rope', n: 1, needs: { string: 2 } },
+    { out: 'iron_ingot', n: 1, needs: { iron_ore: 1, coal: 1 }, at: 'furnace' },
+    { out: 'iron_ingot', n: 1, needs: { scrap: 3, coal: 1 }, at: 'furnace' },
+    // Building
     { out: 'bench', n: 1, needs: { plank: 4 } },
     { out: 'torch', n: 4, needs: { stick: 1, coal: 1 } },
-    { out: 'wood_pick', n: 1, needs: { plank: 3, stick: 2 }, at: 'bench' },
-    { out: 'wood_axe', n: 1, needs: { plank: 3, stick: 2 }, at: 'bench' },
     { out: 'ladder', n: 3, needs: { stick: 7 }, at: 'bench' },
-    { out: 'stone_pick', n: 1, needs: { cobble: 3, stick: 2 }, at: 'bench' },
-    { out: 'stone_axe', n: 1, needs: { cobble: 3, stick: 2 }, at: 'bench' },
+    { out: 'ladder', n: 4, needs: { stick: 3, rope: 1 }, at: 'bench' },
     { out: 'furnace', n: 1, needs: { cobble: 8 }, at: 'bench' },
     { out: 'brick', n: 4, needs: { cobble: 4 }, at: 'bench' },
-    { out: 'iron_ingot', n: 1, needs: { iron_ore: 1, coal: 1 }, at: 'furnace' },
     { out: 'glass', n: 1, needs: { sand: 1 }, at: 'furnace' },
-    { out: 'iron_pick', n: 1, needs: { iron_ingot: 3, stick: 2 }, at: 'bench' },
-    { out: 'iron_axe', n: 1, needs: { iron_ingot: 3, stick: 2 }, at: 'bench' },
+    // Health
+    { out: 'cooked_meat', n: 1, needs: { raw_meat: 1 }, at: 'furnace' },
+    { out: 'bandage', n: 1, needs: { string: 2, fibre: 2 } },
+    // Equipment: tools
+    { out: 'wood_pick', n: 1, needs: { plank: 3, stick: 2 }, at: 'bench' },
+    { out: 'wood_axe', n: 1, needs: { plank: 3, stick: 2 }, at: 'bench' },
+    { out: 'stone_pick', n: 1, needs: { cobble: 3, stick: 2, string: 1 }, at: 'bench' },
+    { out: 'stone_axe', n: 1, needs: { cobble: 3, stick: 2, string: 1 }, at: 'bench' },
+    { out: 'iron_pick', n: 1, needs: { iron_ingot: 3, stick: 2, rope: 1 }, at: 'bench' },
+    { out: 'iron_axe', n: 1, needs: { iron_ingot: 3, stick: 2, rope: 1 }, at: 'bench' },
+    // Equipment: weapons
+    { out: 'wood_dagger', n: 1, needs: { plank: 2, stick: 1 }, at: 'bench' },
+    { out: 'stone_dagger', n: 1, needs: { cobble: 2, stick: 1, string: 1 }, at: 'bench' },
+    { out: 'iron_dagger', n: 1, needs: { iron_ingot: 2, stick: 1, rope: 1 }, at: 'bench' },
+    { out: 'wood_bow', n: 1, needs: { stick: 3, rope: 1, string: 2 }, at: 'bench' },
+    { out: 'oak_bow', n: 1, needs: { oak_log: 2, rope: 1, string: 2 }, at: 'bench' },
+    { out: 'iron_bow', n: 1, needs: { iron_ingot: 2, oak_log: 1, rope: 1, string: 2 }, at: 'bench' },
+    { out: 'wood_arrow', n: 4, needs: { stick: 1, fibre: 1 } },
+    { out: 'stone_arrow', n: 8, needs: { stick: 2, cobble: 1 }, at: 'bench' },
+    { out: 'iron_arrow', n: 8, needs: { stick: 2, iron_ingot: 1 }, at: 'bench' },
   ];
   const STATION_BLOCK = { bench: B.BENCH, furnace: B.FURNACE };
 
@@ -165,8 +229,8 @@
         case B.DIRT: p.fill('#7a5234'); p.speckle(['#5e3d25', '#8d6240', '#6c4a2f'], 0.3); break;
         case B.GRASS:
           p.fill('#7a5234'); p.speckle(['#5e3d25', '#8d6240'], 0.3);
-          p.px(0, 0, '#5fa83a', 16, 3); p.speckle(['#4c8f2c', '#78c24c'], 0.4, 0, 3);
-          for (let x = 0; x < 16; x++) if (p.rnd() < 0.5) p.px(x, 3, '#4c8f2c', 1, 1 + ((p.rnd() * 2) | 0));
+          p.px(0, 0, '#8a9a3a', 16, 3); p.speckle(['#6f7d2c', '#a8ad4c', '#9a8a44'], 0.45, 0, 3);
+          for (let x = 0; x < 16; x++) if (p.rnd() < 0.5) p.px(x, 3, '#6f7d2c', 1, 1 + ((p.rnd() * 2) | 0));
           break;
         case B.STONE: drawStone(p); break;
         case B.COBBLE:
@@ -181,8 +245,8 @@
           p.speckle(['#553a20'], 0.08);
           break;
         case B.LEAVES:
-          p.fill('#3f7f2f'); p.speckle(['#2f6a23', '#57a040', '#4a8f37'], 0.45);
-          for (let k = 0; k < 10; k++) p.g.clearRect((p.rnd() * 16) | 0, (p.rnd() * 16) | 0, 1, 1);
+          p.fill('#5a7a30'); p.speckle(['#465f24', '#6f8f3c', '#7a7a34'], 0.45);
+          for (let k = 0; k < 14; k++) p.g.clearRect((p.rnd() * 16) | 0, (p.rnd() * 16) | 0, 1, 1);
           break;
         case B.PLANK:
           p.fill('#b0844c');
@@ -225,10 +289,33 @@
           [1, 5, 9, 13].forEach(y => { p.px(2, y, '#a67b47', 12, 2); p.px(2, y + 1, '#7a5530', 12, 1); });
           break;
         case B.BEDROCK: p.fill('#2b2b30'); p.speckle(['#44444b', '#1a1a1d', '#36363c'], 0.5); break;
+        case B.OAK_LOG:
+          p.fill('#4e3824');
+          [0, 3, 6, 10, 13].forEach(x => p.px(x, 0, '#3b2a1a', 1, 16));
+          [1, 7, 11].forEach(x => p.px(x, 0, '#6a4c30', 1, 16));
+          for (let k = 0; k < 6; k++) p.px((p.rnd() * 15) | 0, (p.rnd() * 14) | 0, '#2e2014', 2, 2);
+          break;
+        case B.OAK_LEAVES:
+          p.fill('#2f5a26'); p.speckle(['#244a1d', '#3f6f30', '#35632a'], 0.5);
+          for (let k = 0; k < 8; k++) p.g.clearRect((p.rnd() * 16) | 0, (p.rnd() * 16) | 0, 1, 1);
+          break;
+        case B.CHEST:
+          p.px(1, 4, '#8a5a2b', 14, 12); p.px(1, 4, '#a8733c', 14, 1);
+          p.px(1, 8, '#5e3d1d', 14, 1); p.px(1, 15, '#5e3d1d', 14, 1);
+          p.px(1, 4, '#6e6f72', 2, 12); p.px(13, 4, '#6e6f72', 2, 12);
+          p.px(7, 7, '#e0b04a', 2, 3); p.px(7, 9, '#8a6a1c', 2, 1);
+          break;
+        case B.SCRAP:
+          p.fill('#7a4a2a'); p.speckle(['#9a5e32', '#5a3a26', '#b06a36'], 0.4);
+          p.px(1, 2, '#6e6f72', 6, 5); p.px(9, 8, '#5d5f63', 6, 6); p.px(2, 11, '#6e6f72', 4, 3);
+          [[2, 3], [5, 3], [10, 9], [13, 12]].forEach(([x, y]) => p.px(x, y, '#9a9ca0'));
+          p.px(0, 7, '#3e2a1c', 16, 1);
+          break;
+        case B.ASH: p.fill('#4a4744'); p.speckle(['#5d5955', '#383634', '#6a6560'], 0.45); break;
         case B.BUSH:
-          p.px(2, 7, '#3f7f2f', 12, 9); p.px(4, 5, '#3f7f2f', 8, 2); p.px(1, 10, '#3f7f2f', 14, 6);
-          p.px(5, 4, '#4a8f37', 5, 1);
-          for (let k = 0; k < 18; k++) p.px(2 + ((p.rnd() * 12) | 0), 5 + ((p.rnd() * 10) | 0), p.rnd() < 0.5 ? '#2f6a23' : '#57a040');
+          p.px(2, 7, '#5a7a30', 12, 9); p.px(4, 5, '#5a7a30', 8, 2); p.px(1, 10, '#5a7a30', 14, 6);
+          p.px(5, 4, '#6f8f3c', 5, 1);
+          for (let k = 0; k < 18; k++) p.px(2 + ((p.rnd() * 12) | 0), 5 + ((p.rnd() * 10) | 0), p.rnd() < 0.5 ? '#465f24' : '#6f8f3c');
           [[4, 8], [9, 7], [11, 11], [6, 12]].forEach(([x, y]) => { p.px(x, y, '#b3263a', 2, 2); p.px(x, y, '#e2566b'); });
           break;
       }
@@ -267,7 +354,7 @@
     for (const id in ITEM) {
       const it = ITEM[id];
       let c;
-      if (it.block) c = TEX[it.block];
+      if (it.block || it.iconBlock) c = TEX[it.block || it.iconBlock];
       else {
         c = makeCanvas(16);
         const p = painter(c, id.length * 31);
@@ -286,6 +373,42 @@
           case 'wood_axe': drawAxe(p, '#b0844c', '#8a6436'); break;
           case 'stone_axe': drawAxe(p, '#8b8d93', '#66686e'); break;
           case 'iron_axe': drawAxe(p, '#e1e3e8', '#a9acb3'); break;
+          case 'string':
+            p.line(3, 12, 12, 3, '#e8e2c8'); p.line(4, 12, 13, 3, '#c9c2a4');
+            p.px(5, 5, '#e8e2c8', 5, 5); p.px(6, 6, '#c9c2a4', 3, 3); p.px(7, 7, '#e8e2c8');
+            break;
+          case 'rope':
+            for (let i = 0; i < 6; i++) { p.px(3 + i * 2, 11 - i, '#b08850', 2, 2); p.px(4 + i * 2, 12 - i, '#8a6436'); }
+            p.px(2, 4, '#b08850', 10, 2); p.px(2, 6, '#8a6436', 10, 1); p.px(11, 4, '#b08850', 2, 6);
+            break;
+          case 'raw_meat':
+            p.px(3, 5, '#d8606e', 10, 7); p.px(4, 4, '#d8606e', 7, 9); p.px(5, 6, '#f2a0a8', 5, 2); p.px(11, 9, '#f4e9dc', 3, 3);
+            break;
+          case 'cooked_meat':
+            p.px(3, 5, '#8a4a24', 10, 7); p.px(4, 4, '#8a4a24', 7, 9); p.px(5, 6, '#b06a36', 5, 2); p.px(11, 9, '#f4e9dc', 3, 3);
+            break;
+          case 'bandage':
+            p.px(3, 5, '#f2eee4', 10, 7); p.px(3, 5, '#d6d0c2', 2, 7); p.px(7, 7, '#c8324a', 4, 1); p.px(8, 6, '#c8324a', 2, 3);
+            break;
+          case 'wood_dagger': case 'stone_dagger': case 'iron_dagger': {
+            const col = { wood_dagger: ['#c49a5e', '#8a6436'], stone_dagger: ['#9ea0a6', '#66686e'], iron_dagger: ['#eef0f3', '#a9acb3'] }[id];
+            p.line(7, 8, 13, 2, col[0], 2); p.line(8, 9, 13, 4, col[1]);
+            p.px(4, 8, '#3b2a1e', 5, 2); p.px(5, 7, '#3b2a1e', 2, 4);
+            p.line(2, 13, 5, 10, '#7a5234', 2);
+            break;
+          }
+          case 'wood_bow': case 'oak_bow': case 'iron_bow': {
+            const col = { wood_bow: '#b0844c', oak_bow: '#6a4c30', iron_bow: '#9a9ca0' }[id];
+            p.line(3, 2, 8, 3, col, 2); p.line(8, 3, 12, 7, col, 2); p.line(12, 7, 13, 13, col, 2);
+            p.line(3, 3, 13, 13, '#e8e2c8');
+            if (id === 'iron_bow') { p.px(8, 3, '#e1e3e8', 2, 2); p.px(12, 8, '#e1e3e8', 2, 2); }
+            break;
+          }
+          case 'wood_arrow': case 'stone_arrow': case 'iron_arrow':
+            p.line(3, 13, 11, 5, '#8d6240');
+            p.px(11, 3, it.tip, 3, 3); p.px(13, 2, it.tip);
+            p.px(2, 11, '#e8e2c8', 2, 2); p.px(4, 13, '#e8e2c8', 2, 2);
+            break;
           case 'fibre':
             p.line(3, 14, 9, 2, '#9cc36a'); p.line(6, 14, 10, 2, '#b6d884'); p.line(9, 14, 12, 3, '#86b057');
             p.line(12, 14, 13, 4, '#9cc36a'); p.px(4, 8, '#c8a86a', 9, 2);
@@ -312,27 +435,50 @@
   const inWorld = (x, y) => x >= 0 && x < W && y >= 0 && y < H;
   const get = (x, y) => inWorld(x, y) ? tiles[idx(x, y)] : B.BEDROCK;
 
+  const crater = new Uint8Array(W); // columns scorched by old blasts
   function computeSurface() {
+    // Three layers of noise, with a slowly varying roughness so some areas are flat and others jagged.
     for (let x = 0; x < W; x++) {
-      const h = 34 + (noise2(x / 40, 0.5, seed) - 0.5) * 22 + (noise2(x / 12, 0.5, seed + 7) - 0.5) * 7;
+      const rough = 0.5 + noise2(x / 30, 9.1, seed + 50) * 1.3;
+      const h = 34
+        + (noise2(x / 48, 0.5, seed) - 0.5) * 28
+        + (noise2(x / 14, 0.5, seed + 7) - 0.5) * 10 * rough
+        + (noise2(x / 5, 0.5, seed + 13) - 0.5) * 3 * rough;
       surface[x] = Math.round(h);
     }
+    // Blast craters
+    crater.fill(0);
+    const rnd = mulberry32(seed + 99);
+    const n = 4 + ((rnd() * 4) | 0);
+    for (let k = 0; k < n; k++) {
+      const cx = 8 + ((rnd() * (W - 16)) | 0);
+      if (Math.abs(cx - W / 2) < 12) continue; // not on the spawn point
+      const r = 3 + ((rnd() * 5) | 0), depth = 2 + ((rnd() * 3) | 0);
+      for (let x = cx - r; x <= cx + r; x++) {
+        if (x < 0 || x >= W) continue;
+        const f = 1 - ((x - cx) / r) ** 2;
+        surface[x] += Math.round(depth * f);
+        if (f > 0.1) crater[x] = 1;
+      }
+    }
+    for (let x = 0; x < W; x++) surface[x] = Math.max(14, Math.min(58, surface[x]));
   }
 
   function generate() {
     tiles = new Uint8Array(W * H);
     computeSurface();
     const rnd = mulberry32(seed ^ 0x9e3779b9);
+    const set = (x, y, b) => { if (inWorld(x, y)) tiles[idx(x, y)] = b; };
     for (let x = 0; x < W; x++) {
       const h = surface[x];
       const dirtDepth = 3 + Math.floor(noise2(x / 6, 3.3, seed + 5) * 3);
-      const beach = h >= 41;
+      const beach = h >= 45 && !crater[x];
       for (let y = 0; y < H; y++) {
         let b = B.AIR;
         if (y >= H - 1 || (y >= H - 3 && rnd() < 0.5)) b = B.BEDROCK;
         else if (y < h) b = B.AIR;
-        else if (y === h) b = beach ? B.SAND : B.GRASS;
-        else if (y < h + dirtDepth) b = beach && y < h + 3 ? B.SAND : B.DIRT;
+        else if (y === h) b = crater[x] ? B.ASH : beach ? B.SAND : B.GRASS;
+        else if (y < h + dirtDepth) b = crater[x] && y === h + 1 ? B.ASH : beach && y < h + 3 ? B.SAND : B.DIRT;
         else {
           b = B.STONE;
           const depth = y - h;
@@ -348,27 +494,76 @@
         tiles[idx(x, y)] = b;
       }
     }
-    // Trees
+
+    const used = new Uint8Array(W); // columns taken by ruins or trees
+    const nearSpawn = x => Math.abs(x - W / 2) < 6;
+
+    // Ruined buildings: broken walls, a floor, scrap, and usually a supply chest inside.
+    for (let x = 6; x < W - 14; x++) {
+      if (rnd() > 0.035 || nearSpawn(x) || nearSpawn(x + 10) || crater[x]) continue;
+      const w = 5 + ((rnd() * 5) | 0), ht = 3 + ((rnd() * 3) | 0);
+      const base = surface[x + (w >> 1)];
+      const wall = rnd() < 0.5 ? B.BRICK : B.COBBLE;
+      for (let c = x; c < x + w; c++) {
+        for (let y = base + 1; y <= surface[c]; y++) set(c, y, B.COBBLE);      // foundation
+        for (let y = base - ht - 2; y < base; y++) set(c, y, B.AIR);            // clear inside
+        set(c, base, rnd() < 0.85 ? wall : B.SCRAP);                            // floor
+        used[c] = 1;
+      }
+      for (const c of [x, x + w - 1]) {
+        for (let y = base - 1; y >= base - ht; y--) {
+          const missing = (base - y) / ht * 0.5; // more broken towards the top
+          if (rnd() > missing) set(c, y, rnd() < 0.12 ? B.SCRAP : wall);
+        }
+      }
+      for (let c = x; c < x + w; c++) if (rnd() < 0.4) set(c, base - ht - 1, wall); // broken roof
+      if (rnd() < 0.8) set(x + 1 + ((rnd() * (w - 2)) | 0), base - 1, B.CHEST);
+      if (rnd() < 0.6) set(x + 1 + ((rnd() * (w - 2)) | 0), base - 1, B.SCRAP);
+      x += w + 6;
+    }
+
+    // Trees: living, oak, or dead
     let lastTree = -10;
     for (let x = 3; x < W - 3; x++) {
       const h = surface[x];
-      if (tiles[idx(x, h)] !== B.GRASS || x - lastTree < 4 || rnd() > 0.22) continue;
-      if (Math.abs(x - W / 2) < 3) continue; // keep the spawn point clear
-      lastTree = x;
-      const trunk = 4 + ((rnd() * 3) | 0);
-      for (let i = 1; i <= trunk; i++) tiles[idx(x, h - i)] = B.LOG;
-      const top = h - trunk;
-      for (let dy = -2; dy <= 1; dy++) for (let dx = -2; dx <= 2; dx++) {
-        if (Math.abs(dx) + Math.abs(dy) > 3 || (dy === 1 && Math.abs(dx) === 2)) continue;
+      if (tiles[idx(x, h)] !== B.GRASS || used[x] || x - lastTree < 4 || rnd() > 0.2 || nearSpawn(x)) continue;
+      lastTree = x; used[x] = 1;
+      const kind = rnd();
+      if (kind < 0.3) { // dead tree: bare trunk with a stub branch
+        const trunk = 3 + ((rnd() * 3) | 0);
+        for (let i = 1; i <= trunk; i++) set(x, h - i, B.LOG);
+        set(x + (rnd() < 0.5 ? -1 : 1), h - trunk + 1, B.LOG);
+        continue;
+      }
+      const oak = kind > 0.72;
+      const trunk = oak ? 6 + ((rnd() * 3) | 0) : 4 + ((rnd() * 3) | 0);
+      for (let i = 1; i <= trunk; i++) set(x, h - i, oak ? B.OAK_LOG : B.LOG);
+      const top = h - trunk, r = oak ? 3 : 2;
+      for (let dy = -r; dy <= 1; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.abs(dx) + Math.abs(dy) > r + 1 || (dy === 1 && Math.abs(dx) === r)) continue;
         const tx = x + dx, ty = top + dy;
-        if (inWorld(tx, ty) && tiles[idx(tx, ty)] === B.AIR) tiles[idx(tx, ty)] = B.LEAVES;
+        if (inWorld(tx, ty) && tiles[idx(tx, ty)] === B.AIR) tiles[idx(tx, ty)] = oak ? B.OAK_LEAVES : B.LEAVES;
       }
     }
-    // Bushes
+
+    // Surface clutter: bushes, lone supply chests half-buried in the dust, and scrap heaps
     for (let x = 1; x < W - 1; x++) {
       const h = surface[x];
-      if (tiles[idx(x, h)] === B.GRASS && tiles[idx(x, h - 1)] === B.AIR && rnd() < 0.12) tiles[idx(x, h - 1)] = B.BUSH;
+      if (used[x] || tiles[idx(x, h - 1)] !== B.AIR) continue;
+      const top = tiles[idx(x, h)];
+      const r = rnd();
+      if (top === B.GRASS && r < 0.3) set(x, h - 1, B.BUSH);
+      else if (r > 0.97 && !nearSpawn(x)) set(x, h - 1, B.CHEST);
+      else if (r > 0.93) set(x, h - 1, B.SCRAP);
     }
+    scanChests();
+  }
+
+  // Remember where unopened chests are, for the on-screen chest finder.
+  let chests = [];
+  function scanChests() {
+    chests = [];
+    for (let i = 0; i < tiles.length; i++) if (tiles[i] === B.CHEST) chests.push([i % W, (i / W) | 0]);
   }
 
   // Sunlight falls straight down; then all light spreads outward, fading per block.
@@ -411,7 +606,7 @@
   }
 
   // ---------- Player ----------
-  const player = { x: 0, y: 0, w: 0.7, h: 1.7, vx: 0, vy: 0, onGround: false, face: 1, walk: 0, hp: 100 };
+  const player = { x: 0, y: 0, w: 0.7, h: 1.7, vx: 0, vy: 0, onGround: false, face: 1, walk: 0, hp: 100, kb: 0, swing: 0 };
   function spawn() {
     const x = Math.floor(W / 2);
     let y = 0;
@@ -486,8 +681,9 @@
   // Seconds to mine a block with whatever is in hand. A tool is fastest on its own material.
   function mineTime(b) {
     const bd = BLOCK[b], tool = heldTool();
-    if (!tool) return bd.hard;
-    const speed = tool.tool === bd.pref ? tool.speed : 1 + (tool.speed - 1) * 0.3;
+    if (!tool) return bd.hard / (bd.fastTier ? 0.35 : 1);
+    let speed = tool.tool === bd.pref ? tool.speed : 1 + (tool.speed - 1) * 0.3;
+    if (tool.tier < bd.fastTier) speed *= 0.35;
     return bd.hard / speed;
   }
 
@@ -517,21 +713,25 @@
   let progress = {};
   const GOALS = [
     ['log', 'Hold left click on a tree trunk to chop some logs.'],
+    ['chest', 'Search the surface for a supply chest. Follow the gold arrow, then right click the chest.'],
     ['bench', 'Press E and craft Planks, then a Workbench.'],
     ['placed_bench', 'Right click the ground to place your Workbench.'],
     ['wood_pick', 'Stand near the Workbench and craft a Wooden Pickaxe.'],
     ['wood_axe', 'Craft a Wooden Hatchet too. It chops wood much faster.'],
+    ['string', 'Break bushes and leaves for fibre, then turn 2 fibre into String.'],
     ['cobble', 'Select the pickaxe and dig down into stone.'],
+    ['stone_axe', 'Craft a Stone Hatchet. It cuts through tough oak trees.'],
     ['stone_pick', 'Craft a Stone Pickaxe at the Workbench.'],
+    ['kill', 'Fight off a mutant. Hit it with a dagger or shoot it with a bow.'],
     ['coal', 'Find coal ore (black specks) and make Torches.'],
     ['furnace', 'Craft a Furnace from 8 Cobblestone.'],
-    ['iron_ingot', 'Dig deep for iron ore (orange specks) and smelt it at a Furnace.'],
-    ['iron_pick', 'Craft an Iron Pickaxe.'],
+    ['iron_ingot', 'Smelt an Iron Ingot from iron ore or 3 scrap metal at a Furnace.'],
+    ['iron_pick', 'Make Rope from String, then craft an Iron Pickaxe.'],
   ];
   function markProgress() { for (const [id] of GOALS) if (ITEM[id] && count(id) > 0) progress[id] = true; }
   function currentGoal() {
     for (const [id, text] of GOALS) if (!progress[id]) return text;
-    return 'You have every tool. Build a house with bricks, glass and torches.';
+    return 'You are well equipped. Build a shelter with bricks, glass and torches.';
   }
 
   // ---------- Sound ----------
@@ -621,6 +821,11 @@
       craft: () => play(() => { tone({ freq: 660, dur: 0.12, type: 'triangle', gain: 0.18 }); tone({ freq: 990, dur: 0.18, type: 'triangle', gain: 0.18, delay: 0.09 }); }),
       hurt: () => play(v => { tone({ freq: 220 * v, to: 110, dur: 0.18, type: 'sawtooth', gain: 0.12 }); noise({ type: 'lowpass', freq: 500, dur: 0.12, gain: 0.3 }); }),
       eat: () => play(v => { for (let i = 0; i < 3; i++) noise({ type: 'bandpass', freq: 1500 * v, q: 2, dur: 0.05, gain: 0.3, delay: i * 0.09 }); }),
+      chest: () => play(() => { [523, 659, 784, 1047].forEach((f, i) => tone({ freq: f, dur: 0.14, type: 'triangle', gain: 0.14, delay: i * 0.07 })); }),
+      swing: () => play(v => noise({ type: 'highpass', freq: 1800 * v, dur: 0.09, gain: 0.18 })),
+      hitEnemy: () => play(v => { noise({ type: 'lowpass', freq: 700 * v, dur: 0.08, gain: 0.5 }); tone({ freq: 160 * v, to: 90, dur: 0.08, type: 'square', gain: 0.06 }); }),
+      enemyDie: () => play(v => { tone({ freq: 420 * v, to: 90, dur: 0.3, type: 'sawtooth', gain: 0.1 }); noise({ type: 'lowpass', freq: 600, dur: 0.2, gain: 0.3 }); }),
+      bow: () => play(v => { tone({ freq: 190 * v, to: 110, dur: 0.12, type: 'triangle', gain: 0.3 }); noise({ type: 'highpass', freq: 2500, dur: 0.07, gain: 0.12 }); }),
       denied: () => play(() => tone({ freq: 160, to: 120, dur: 0.14, type: 'square', gain: 0.05 })),
       click: () => play(() => tone({ freq: 900, dur: 0.03, type: 'square', gain: 0.03 })),
     };
@@ -629,7 +834,8 @@
     [B.LOG]: 'wood', [B.PLANK]: 'wood', [B.BENCH]: 'wood', [B.LADDER]: 'wood', [B.TORCH]: 'wood',
     [B.STONE]: 'stone', [B.COBBLE]: 'stone', [B.COAL_ORE]: 'stone', [B.IRON_ORE]: 'stone',
     [B.FURNACE]: 'stone', [B.BRICK]: 'stone', [B.BEDROCK]: 'stone',
-    [B.LEAVES]: 'leaf', [B.BUSH]: 'leaf', [B.GLASS]: 'glass',
+    [B.LEAVES]: 'leaf', [B.BUSH]: 'leaf', [B.OAK_LEAVES]: 'leaf', [B.GLASS]: 'glass',
+    [B.OAK_LOG]: 'wood', [B.CHEST]: 'wood', [B.SCRAP]: 'stone',
   };
   const materialOf = b => MATERIAL[b] || 'dirt';
   window.addEventListener('pointerdown', () => sfx.unlock(), true);
@@ -748,17 +954,50 @@
     tiles[idx(tx, ty)] = B.AIR;
     sfx.break(materialOf(b));
     const drop = BLOCK[b].drop;
-    if (drop) addItem(drop, 1);
+    if (drop) addItem(drop, BLOCK[b].dropN);
     if (b === B.LEAVES) {
       if (Math.random() < 0.2) addItem('stick', 1);
       if (Math.random() < 0.5) dropFibre(1);
     }
+    if (b === B.OAK_LEAVES) { // oak gives double
+      if (Math.random() < 0.4) addItem('stick', 1);
+      dropFibre(1);
+    }
     if (b === B.BUSH) dropFibre(Math.random() < 0.5 ? 2 : 1);
+    if (b === B.CHEST) { lootChest(); scanChests(); }
     // Torches and ladders resting on this block fall off with it.
     const above = get(tx, ty - 1);
     if (above === B.TORCH && !hasSupport(tx, ty - 1)) breakBlock(tx, ty - 1);
     computeLight();
   }
+  // Supply chests hold 2–3 random pieces of equipment. Better gear is rarer.
+  const LOOT = [
+    ['wood_dagger', 10], ['wood_pick', 8], ['wood_axe', 8], ['wood_arrow', 10, 6, 12],
+    ['stone_dagger', 6], ['stone_pick', 5], ['stone_axe', 5], ['stone_arrow', 7, 4, 10], ['wood_bow', 5],
+    ['oak_bow', 2], ['iron_dagger', 2], ['iron_pick', 1.5], ['iron_axe', 1.5], ['iron_arrow', 3, 3, 8], ['iron_bow', 0.7],
+  ];
+  const LOOT_TOTAL = LOOT.reduce((s, l) => s + l[1], 0);
+  function lootChest() {
+    const found = [];
+    const rolls = 2 + (Math.random() < 0.4 ? 1 : 0);
+    for (let i = 0; i < rolls; i++) {
+      let r = Math.random() * LOOT_TOTAL;
+      const [id, , min = 1, max = 1] = LOOT.find(l => (r -= l[1]) < 0) || LOOT[0];
+      const n = min + Math.floor(Math.random() * (max - min + 1));
+      addItem(id, n);
+      found.push(`${n > 1 ? n + ' × ' : ''}${ITEM[id].name}`);
+    }
+    progress.chest = true;
+    sfx.chest();
+    toast(`Supply chest: ${found.join(', ')}`, 4000);
+  }
+  function openChest(tx, ty) {
+    tiles[idx(tx, ty)] = B.AIR;
+    lootChest();
+    scanChests();
+    computeLight();
+  }
+
   // Each piece of fibre has a 50% chance of coming with a berry.
   function dropFibre(n) {
     addItem('fibre', n);
@@ -780,6 +1019,8 @@
     if (player.hp === 0) {
       spawn();
       player.hp = MAX_HP;
+      enemies = []; arrows = [];
+      iframes = 2;
       snapCamera();
       toast('You passed out and woke up back at the start. You kept your items.');
     }
@@ -790,6 +1031,164 @@
     heal(ITEM[it.id].heal);
     sfx.eat();
     toast(`+${ITEM[it.id].heal} health`);
+  }
+
+  // ---------- Enemies and combat ----------
+  const ENEMY = {
+    rat: { name: 'Mutant Rat', w: 0.9, h: 0.6, hp: 20, dmg: 6, speed: 3.4, jump: -9, drops: [['raw_meat', 1, 0.7]] },
+    ghoul: { name: 'Ghoul', w: 0.7, h: 1.7, hp: 45, dmg: 12, speed: 2.4, jump: -10.5,
+      drops: [['scrap', 1, 0.5], ['string', 1, 0.5], ['rope', 1, 0.15], ['raw_meat', 1, 0.3]] },
+  };
+  const MAX_ENEMIES = 5, MELEE_REACH = 2.4;
+  let enemies = [], arrows = [], floaters = [];
+  let spawnTimer = 30, attackCooldown = 0, iframes = 0;
+
+  const mouseWorld = () => ({ x: (mouse.x + camera.x) / TILE, y: (mouse.y + camera.y) / TILE });
+  const centre = e => [e.x + e.w / 2, e.y + e.h / 2];
+  const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+  function stepBody(e, dt) {
+    e.vy = Math.min(e.vy + GRAVITY * dt, MAX_FALL);
+    const steps = Math.ceil(Math.max(Math.abs(e.vx), Math.abs(e.vy)) * dt / 0.4) || 1;
+    const wasGround = e.onGround;
+    e.onGround = false; e.blocked = false;
+    for (let i = 0; i < steps; i++) {
+      const nx = e.x + e.vx * dt / steps;
+      if (!boxHits(nx, e.y, e.w, e.h)) e.x = nx;
+      else if (wasGround && !boxHits(nx, e.y - 1, e.w, e.h)) { e.x = nx; e.y -= 1; }
+      else e.blocked = true;
+      const ny = e.y + e.vy * dt / steps;
+      if (!boxHits(e.x, ny, e.w, e.h)) e.y = ny;
+      else {
+        if (e.vy > 0) { e.y = Math.floor(ny + e.h) - e.h - 1e-4; e.onGround = true; }
+        e.vy = 0;
+      }
+    }
+  }
+
+  function trySpawn() {
+    if (enemies.length >= MAX_ENEMIES) return;
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const x = Math.floor(player.x + side * (18 + Math.random() * 16));
+    if (x < 1 || x >= W - 1) return;
+    let y, type;
+    if (Math.random() < 0.6) { // on the surface
+      y = 0;
+      while (y < H && !BLOCK[get(x, y)].solid) y++;
+      type = Math.random() < 0.7 ? 'rat' : 'ghoul';
+    } else { // in dark caves near the player's depth
+      y = Math.floor(player.y) + Math.floor(Math.random() * 16 - 8);
+      if (y < 1 || BLOCK[get(x, y)].solid) return;
+      while (y < H && !BLOCK[get(x, y)].solid) y++;
+      if (light[idx(x, y - 1)] > 6) return;
+      type = Math.random() < 0.5 ? 'rat' : 'ghoul';
+    }
+    const d = ENEMY[type];
+    const e = { type, x: x + 0.5 - d.w / 2, y: y - d.h - 0.01, w: d.w, h: d.h, vx: 0, vy: 0, kb: 0,
+      hp: d.hp, max: d.hp, face: -side, flash: 0, wander: 0, wanderT: 0, onGround: false };
+    if (y >= H || boxHits(e.x, e.y, e.w, e.h)) return;
+    enemies.push(e);
+  }
+
+  function updateEnemies(dt) {
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) { spawnTimer = 5 + Math.random() * 4; trySpawn(); }
+    const [pcx, pcy] = centre(player);
+    for (const e of enemies) {
+      const d = ENEMY[e.type];
+      const [ecx, ecy] = centre(e);
+      const dx = pcx - ecx, dy = pcy - ecy;
+      let dir;
+      if (Math.abs(dx) < 16 && Math.abs(dy) < 8) dir = Math.abs(dx) > 0.3 ? Math.sign(dx) : 0; // chase
+      else {
+        e.wanderT -= dt;
+        if (e.wanderT <= 0) { e.wander = [-1, 0, 1][(Math.random() * 3) | 0]; e.wanderT = 2 + Math.random() * 3; }
+        dir = e.wander;
+      }
+      if (dir) e.face = dir;
+      e.kb -= e.kb * Math.min(1, dt * 6);
+      e.vx = dir * d.speed + e.kb;
+      stepBody(e, dt);
+      if (e.blocked && e.onGround) e.vy = d.jump;
+      e.flash = Math.max(0, e.flash - dt);
+      if (iframes <= 0 && overlaps(e, player)) {
+        iframes = 0.8;
+        player.kb = Math.sign(dx || 1) * 9;
+        player.vy = -5;
+        hurt(d.dmg);
+      }
+      if (Math.abs(dx) > 60 || e.y > H) e.dead = true;
+    }
+    enemies = enemies.filter(e => !e.dead);
+  }
+
+  function damageEnemy(e, n, fromX) {
+    const [ecx, ecy] = centre(e);
+    e.hp -= n;
+    e.flash = 0.15;
+    e.kb = Math.sign(ecx - fromX || 1) * 8;
+    e.vy = -4;
+    floaters.push({ x: ecx, y: e.y, text: `-${n}`, col: '#ffd166', t: 0.9 });
+    sfx.hitEnemy();
+    if (e.hp <= 0) {
+      e.dead = true;
+      sfx.enemyDie();
+      progress.kill = true;
+      for (const [id, n, chance] of ENEMY[e.type].drops) {
+        if (Math.random() < chance) {
+          addItem(id, n);
+          floaters.push({ x: ecx, y: ecy - 0.5, text: `+${n} ${ITEM[id].name}`, col: '#e8e2c8', t: 1.4 });
+        }
+      }
+    }
+  }
+
+  // Enemy under the crosshair, if any.
+  function enemyAtMouse() {
+    const m = mouseWorld();
+    return enemies.find(e => !e.dead && m.x > e.x - 0.25 && m.x < e.x + e.w + 0.25 && m.y > e.y - 0.25 && m.y < e.y + e.h + 0.25);
+  }
+
+  function melee(e) {
+    const it = held() && ITEM[held().id];
+    const dmg = it && it.melee ? it.melee : it && it.tool ? 4 : 2;
+    attackCooldown = it && it.melee ? 0.35 : 0.5;
+    player.swing = 0.2;
+    player.face = Math.sign(centre(e)[0] - centre(player)[0]) || player.face;
+    sfx.swing();
+    damageEnemy(e, dmg, centre(player)[0]);
+  }
+
+  function fireBow(bow) {
+    attackCooldown = 0.55;
+    const ammo = ARROWS.find(a => count(a) > 0);
+    if (!ammo) { toast('You have no arrows. Craft some or find them in supply chests.'); sfx.denied(); return; }
+    removeItem(ammo, 1);
+    const ox = player.x + player.w / 2, oy = player.y + 0.6, m = mouseWorld();
+    const ang = Math.atan2(m.y - oy, m.x - ox);
+    arrows.push({ x: ox, y: oy, vx: Math.cos(ang) * bow.bow, vy: Math.sin(ang) * bow.bow,
+      dmg: ITEM[ammo].arrow + bow.bonus, tip: ITEM[ammo].tip, life: 3 });
+    player.face = Math.cos(ang) < 0 ? -1 : 1;
+    sfx.bow();
+  }
+
+  function updateArrows(dt) {
+    for (const a of arrows) {
+      a.vy += GRAVITY * 0.35 * dt;
+      a.life -= dt;
+      const steps = Math.ceil(Math.hypot(a.vx, a.vy) * dt / 0.25) || 1;
+      for (let i = 0; i < steps && !a.dead; i++) {
+        a.x += a.vx * dt / steps; a.y += a.vy * dt / steps;
+        if (solidAt(Math.floor(a.x), Math.floor(a.y))) { a.dead = true; sfx.hit('wood'); break; }
+        const e = enemies.find(e => !e.dead && a.x > e.x && a.x < e.x + e.w && a.y > e.y && a.y < e.y + e.h);
+        if (e) { damageEnemy(e, a.dmg, a.x - a.vx); a.dead = true; }
+      }
+      if (a.life <= 0) a.dead = true;
+    }
+    arrows = arrows.filter(a => !a.dead);
+    enemies = enemies.filter(e => !e.dead);
+    for (const f of floaters) { f.t -= dt; f.y -= dt * 0.8; }
+    floaters = floaters.filter(f => f.t > 0);
   }
 
   function hasSupport(tx, ty) {
@@ -806,7 +1205,8 @@
     const down = keys.s || keys.arrowdown || touch.down;
 
     const dir = (right ? 1 : 0) - (left ? 1 : 0);
-    player.vx = dir * SPEED;
+    player.kb -= player.kb * Math.min(1, dt * 8);
+    player.vx = dir * SPEED + player.kb;
     if (dir) player.face = dir;
     player.walk = dir && player.onGround ? player.walk + dt * 10 : 0;
 
@@ -841,10 +1241,26 @@
       }
     } else stepTimer = 0;
 
-    // Mining and placing
+    // Fighting, mining and placing
     placeCooldown -= dt;
+    attackCooldown -= dt;
+    iframes -= dt;
+    player.swing = Math.max(0, (player.swing || 0) - dt);
+    tipCooldown -= dt;
     const t = targetTile();
-    if (mouse.left && !invOpen() && t.inReach) {
+    const heldItem = held() && ITEM[held().id];
+    const foe = mouse.left && !invOpen() ? enemyAtMouse() : null;
+    let fighting = false;
+    if (mouse.left && !invOpen() && heldItem && heldItem.bow) {
+      fighting = true;
+      mining.t = 0;
+      if (attackCooldown <= 0) fireBow(heldItem);
+    } else if (foe && Math.hypot(centre(foe)[0] - centre(player)[0], centre(foe)[1] - centre(player)[1]) <= MELEE_REACH) {
+      fighting = true;
+      mining.t = 0;
+      if (attackCooldown <= 0) melee(foe);
+    }
+    if (fighting) { /* no mining while attacking */ } else if (mouse.left && !invOpen() && t.inReach) {
       const b = get(t.tx, t.ty);
       if (b === B.AIR) mining.t = 0;
       else {
@@ -852,6 +1268,7 @@
         const bd = BLOCK[b];
         const tool = heldTool();
         const tier = tool ? tool.tier : 0;
+        if (t.visible && bd.fastTier > tier && tipCooldown <= 0) showOakTip();
         if (!t.visible) {
           if (!mining.warned) { toast('Something is in the way. Clear the blocks in front first.'); sfx.denied(); }
           mining.warned = true;
@@ -869,7 +1286,10 @@
     } else mining.t = 0;
 
     const food = held() && ITEM[held().id].heal;
-    if (mouse.right && !invOpen() && food && placeCooldown <= 0) {
+    if (mouse.right && !invOpen() && t.visible && get(t.tx, t.ty) === B.CHEST && placeCooldown <= 0) {
+      placeCooldown = 0.4;
+      openChest(t.tx, t.ty);
+    } else if (mouse.right && !invOpen() && food && placeCooldown <= 0) {
       placeCooldown = 0.4;
       eat(held());
     } else if (mouse.right && !invOpen() && t.inReach && placeCooldown <= 0) {
@@ -886,6 +1306,9 @@
       }
     }
 
+    updateEnemies(dt);
+    updateArrows(dt);
+
     // Camera eases toward the player.
     const tx = (player.x + player.w / 2) * TILE - viewW / 2;
     const ty = (player.y + player.h / 2) * TILE - viewH / 2;
@@ -901,22 +1324,87 @@
 
   // ---------- Rendering ----------
   function drawSky() {
+    // Smoggy wasteland sky
     const g = ctx.createLinearGradient(0, 0, 0, viewH);
-    g.addColorStop(0, '#5aa2d6');
-    g.addColorStop(1, '#cfe9f2');
+    g.addColorStop(0, '#6d7479');
+    g.addColorStop(0.6, '#b99a72');
+    g.addColorStop(1, '#e2b97c');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, viewW, viewH);
-    // Soft distant hills
-    ctx.fillStyle = 'rgba(90,140,120,0.35)';
+    // Pale sun behind the haze
+    const sx = viewW * 0.72 - camera.x * 0.02, sy = viewH * 0.28;
+    const sun = ctx.createRadialGradient(sx, sy, 4, sx, sy, 90);
+    sun.addColorStop(0, 'rgba(255,236,190,0.9)');
+    sun.addColorStop(0.25, 'rgba(255,220,160,0.35)');
+    sun.addColorStop(1, 'rgba(255,220,160,0)');
+    ctx.fillStyle = sun;
+    ctx.fillRect(sx - 90, sy - 90, 180, 180);
+    // Far layer: a ruined city skyline
+    const off = camera.x * 0.15, groundY = viewH * 0.62 - camera.y * 0.05;
+    ctx.fillStyle = 'rgba(78,70,66,0.55)';
+    for (let i = Math.floor(off / 70) - 1; i * 70 - off < viewW + 70; i++) {
+      const bw = 34 + hash2(i, 1, 7) * 40, bh = 40 + hash2(i, 2, 7) * 170;
+      const bx = i * 70 - off + hash2(i, 3, 7) * 20;
+      ctx.beginPath();
+      ctx.moveTo(bx, groundY);
+      ctx.lineTo(bx, groundY - bh);
+      // broken, jagged roofline
+      const steps = 4;
+      for (let k = 1; k <= steps; k++) ctx.lineTo(bx + bw * k / steps, groundY - bh + hash2(i, 10 + k, 7) * bh * 0.35);
+      ctx.lineTo(bx + bw, groundY);
+      ctx.fill();
+    }
+    ctx.fillRect(0, groundY, viewW, viewH - groundY);
+    // Near layer: rubble hills
+    ctx.fillStyle = 'rgba(96,78,62,0.6)';
     ctx.beginPath();
     ctx.moveTo(0, viewH);
     for (let x = 0; x <= viewW; x += 16) {
       const wx = (x + camera.x * 0.3) / 180;
-      const y = viewH * 0.55 + Math.sin(wx) * 40 + Math.sin(wx * 2.3) * 18 - camera.y * 0.1;
+      const y = viewH * 0.62 + Math.sin(wx) * 30 + Math.sin(wx * 2.3) * 14 + Math.sin(wx * 7.1) * 4 - camera.y * 0.1;
       ctx.lineTo(x, y);
     }
     ctx.lineTo(viewW, viewH);
     ctx.fill();
+  }
+
+  // Gold arrow at the screen edge pointing to the nearest unopened chest.
+  function drawChestFinder(cx, cy) {
+    const px = player.x + player.w / 2, py = player.y + player.h / 2;
+    let best = null, bd = 120;
+    for (const [x, y] of chests) {
+      const d = Math.hypot(x + 0.5 - px, y + 0.5 - py);
+      if (d < bd) { bd = d; best = [x, y]; }
+    }
+    if (!best) return;
+    const tx = (best[0] + 0.5) * TILE - cx, ty = (best[1] + 0.5) * TILE - cy;
+    const bob = Math.sin(performance.now() / 250) * 3;
+    ctx.fillStyle = '#e8b83a';
+    ctx.strokeStyle = 'rgba(20,16,8,0.8)';
+    ctx.lineWidth = 2;
+    const m = 36;
+    if (tx > m && tx < viewW - m && ty > m + 60 && ty < viewH - m - 90) {
+      // On screen: a small bobbing marker above the chest
+      ctx.beginPath();
+      ctx.moveTo(tx - 6, ty - 30 + bob); ctx.lineTo(tx + 6, ty - 30 + bob); ctx.lineTo(tx, ty - 22 + bob);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      return;
+    }
+    const ox = viewW / 2, oy = viewH / 2, ang = Math.atan2(ty - oy, tx - ox);
+    const ex = Math.max(m, Math.min(viewW - m, ox + Math.cos(ang) * viewW));
+    const ey = Math.max(m + 60, Math.min(viewH - m - 90, oy + Math.sin(ang) * viewH));
+    ctx.save();
+    ctx.translate(ex, ey);
+    ctx.rotate(ang);
+    ctx.beginPath();
+    ctx.moveTo(12 + bob, 0); ctx.lineTo(-6 + bob, -9); ctx.lineTo(-6 + bob, 9);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    ctx.font = '12px "Silkscreen", ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 3;
+    ctx.strokeText(`chest ${Math.round(bd)}m`, ex, ey + 24);
+    ctx.fillText(`chest ${Math.round(bd)}m`, ex, ey + 24);
   }
 
   function render() {
@@ -935,7 +1423,16 @@
       if (b) ctx.drawImage(TEX[b], sx, sy, TILE, TILE);
     }
 
+    for (const e of enemies) drawEnemy(e, cx, cy);
     drawPlayer(cx, cy);
+    for (const a of arrows) {
+      const sp = Math.hypot(a.vx, a.vy), ux = a.vx / sp, uy = a.vy / sp;
+      const x = a.x * TILE - cx, y = a.y * TILE - cy;
+      ctx.strokeStyle = '#8d6240'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x - ux * 18, y - uy * 18); ctx.lineTo(x, y); ctx.stroke();
+      ctx.fillStyle = a.tip; ctx.fillRect(x - 2, y - 2, 4, 4);
+      ctx.fillStyle = '#e8e2c8'; ctx.fillRect(x - ux * 18 - 2, y - uy * 18 - 2, 3, 3);
+    }
 
     // Darkness
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
@@ -961,6 +1458,20 @@
       }
       if (!mouse.touch) drawCrosshair(mouse.x, mouse.y);
     }
+    drawChestFinder(cx, cy);
+
+    // Floating damage numbers and pickups
+    ctx.font = '14px "Silkscreen", ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(10,8,6,0.8)';
+    for (const f of floaters) {
+      ctx.globalAlpha = Math.min(1, f.t * 2);
+      ctx.fillStyle = f.col;
+      ctx.strokeText(f.text, f.x * TILE - cx, f.y * TILE - cy);
+      ctx.fillText(f.text, f.x * TILE - cx, f.y * TILE - cy);
+    }
+    ctx.globalAlpha = 1;
 
     // Red flash when hurt
     if (hurtFlash > 0) {
@@ -997,7 +1508,65 @@
     ctx.stroke();
   }
 
+  function drawEnemy(e, cx, cy) {
+    const x = Math.round(e.x * TILE - cx), y = Math.round(e.y * TILE - cy);
+    const w = Math.round(e.w * TILE), h = Math.round(e.h * TILE);
+    const step = e.onGround && e.vx ? Math.sin(performance.now() / 70) * 2 : 0;
+    ctx.save();
+    ctx.translate(x + w / 2, y);
+    ctx.scale(e.face, 1);
+    if (e.type === 'rat') {
+      ctx.fillStyle = '#d98a9a'; // tail
+      ctx.fillRect(-w / 2 - 8, h - 8, 10, 2);
+      ctx.fillRect(-w / 2 - 12, h - 10, 5, 2);
+      ctx.fillStyle = '#5e5047';
+      ctx.fillRect(-w / 2, 4, w - 6, h - 8);
+      ctx.fillRect(w / 2 - 10, 2, 10, 10);
+      ctx.fillStyle = '#7a6a5e';
+      ctx.fillRect(-w / 2 + 2, 4, w - 12, 3);
+      ctx.fillStyle = '#d98a9a';
+      ctx.fillRect(w / 2 - 8, 0, 4, 4);   // ear
+      ctx.fillRect(w / 2 - 1, 7, 3, 3);   // nose
+      ctx.fillStyle = '#ff3b3b';
+      ctx.fillRect(w / 2 - 5, 5, 2, 2);   // eye
+      ctx.fillStyle = '#3e342e';
+      ctx.fillRect(-w / 2 + 3 + step, h - 4, 4, 4);
+      ctx.fillRect(w / 2 - 12 - step, h - 4, 4, 4);
+    } else {
+      ctx.fillStyle = '#3a3230'; // legs
+      ctx.fillRect(-7 + step, h - 18, 6, 18);
+      ctx.fillRect(1 - step, h - 18, 6, 18);
+      ctx.fillStyle = '#4a3b2e'; // torn shirt
+      ctx.fillRect(-8, 17, 16, h - 34);
+      ctx.fillStyle = '#9fb58a';
+      ctx.fillRect(-3, h - 22, 4, 3);
+      ctx.fillRect(-6, 1, 14, 16); // head
+      ctx.fillStyle = '#7f9570';
+      ctx.fillRect(-6, 1, 14, 3);
+      ctx.fillStyle = '#e8ff7a'; // glowing eyes
+      ctx.fillRect(3, 7, 3, 2);
+      ctx.fillStyle = '#2e2a26';
+      ctx.fillRect(2, 13, 5, 2);
+      ctx.fillStyle = '#9fb58a'; // reaching arm
+      ctx.fillRect(4, 20, 12, 4);
+    }
+    if (e.flash > 0) {
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-w / 2 - 2, 0, w + 4, h);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    if (e.hp < e.max) {
+      ctx.fillStyle = 'rgba(10,8,6,0.8)';
+      ctx.fillRect(x + w / 2 - 13, y - 8, 26, 5);
+      ctx.fillStyle = '#e2566b';
+      ctx.fillRect(x + w / 2 - 12, y - 7, 24 * Math.max(0, e.hp) / e.max, 3);
+    }
+  }
+
   function drawPlayer(cx, cy) {
+    if (iframes > 0 && Math.floor(performance.now() / 80) % 2) return; // blink after being hit
     const px = Math.round(player.x * TILE - cx), py = Math.round(player.y * TILE - cy);
     const w = Math.round(player.w * TILE), h = Math.round(player.h * TILE);
     const f = player.face;
@@ -1049,7 +1618,7 @@
     ctx.fillStyle = '#6e2c10';
     ctx.fillRect(4, 13, 3, 1);
     // arm, swinging while mining
-    const mSwing = mining.t > 0 ? Math.sin(performance.now() / 60) * 0.6 : 0;
+    const mSwing = mining.t > 0 ? Math.sin(performance.now() / 60) * 0.6 : player.swing > 0 ? -1.2 + player.swing * 8 : 0;
     ctx.translate(0, 20);
     ctx.rotate(-0.3 + mSwing - swing * 0.03);
     ctx.fillStyle = SKIN;
@@ -1069,15 +1638,18 @@
   const goalEl = document.getElementById('goal-text');
   const toastEl = document.getElementById('toast');
   const healthEl = document.getElementById('health');
+  const tabsEl = document.getElementById('craft-tabs');
+  const tipEl = document.getElementById('tip');
+  let craftFilter = 'All', highlightRecipe = null, tipCooldown = 0;
   const healthFill = document.getElementById('health-fill');
   const healthText = document.getElementById('health-text');
   let uiDirty = true, pickSlot = null, toastTimer = 0, lastStationKey = '';
 
-  function toast(msg) {
+  function toast(msg, ms = 2200) {
     toastEl.textContent = msg;
     toastEl.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms);
   }
 
   function slotEl(i, withKey) {
@@ -1087,7 +1659,11 @@
     el.className = 'slot';
     if (it) {
       el.style.backgroundImage = `url(${ICON_URL[it.id]})`;
-      el.title = ITEM[it.id].name;
+      const d = describe(it.id);
+      el.title = `${ITEM[it.id].name} · ${ITEM[it.id].cat}${d ? '\n' + d : ''}`;
+      const c = document.createElement('span');
+      c.className = `cat cat-${ITEM[it.id].cat.toLowerCase()}`;
+      el.append(c);
       el.setAttribute('aria-label', `${ITEM[it.id].name} × ${it.n}`);
       if (it.n > 1) { const n = document.createElement('span'); n.className = 'n'; n.textContent = it.n; el.append(n); }
     } else el.setAttribute('aria-label', 'Empty slot');
@@ -1117,8 +1693,28 @@
     const st = nearStations();
     lastStationKey = Object.keys(st).join();
     stationsEl.textContent = `near: ${['bench', 'furnace'].filter(s => st[s]).map(s => ITEM[s].name).join(', ') || 'nothing'}`;
+    tabsEl.replaceChildren();
+    for (const c of ['All', ...CATS]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = c;
+      b.setAttribute('aria-pressed', String(craftFilter === c));
+      b.addEventListener('click', () => { craftFilter = c; uiDirty = true; });
+      tabsEl.append(b);
+    }
     recipesEl.replaceChildren();
-    for (const r of RECIPES) {
+    const list = RECIPES.filter(r => craftFilter === 'All' || ITEM[r.out].cat === craftFilter)
+      .sort((a, b) => CATS.indexOf(ITEM[a.out].cat) - CATS.indexOf(ITEM[b.out].cat));
+    let lastCat = null;
+    for (const r of list) {
+      const cat = ITEM[r.out].cat;
+      if (craftFilter === 'All' && cat !== lastCat) {
+        const h = document.createElement('h4');
+        h.className = `group cat-${cat.toLowerCase()}`;
+        h.textContent = cat;
+        recipesEl.append(h);
+      }
+      lastCat = cat;
       const ok = canCraft(r, st);
       const row = document.createElement('div');
       row.className = 'recipe' + (ok ? ' ok' : '');
@@ -1129,6 +1725,15 @@
       const name = document.createElement('div');
       name.className = 'name';
       name.textContent = (r.n > 1 ? r.n + ' × ' : '') + ITEM[r.out].name;
+      if (r.out === highlightRecipe) row.classList.add('focus');
+      mid.append(name);
+      const desc = describe(r.out);
+      if (desc) {
+        const d = document.createElement('div');
+        d.className = 'desc';
+        d.textContent = desc;
+        mid.append(d);
+      }
       const needs = document.createElement('div');
       needs.className = 'needs';
       for (const [id, n] of Object.entries(r.needs)) {
@@ -1144,7 +1749,7 @@
         s.textContent = `at ${ITEM[r.at].name}`;
         needs.append(s);
       }
-      mid.append(name, needs);
+      mid.append(needs);
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = 'Craft';
@@ -1172,10 +1777,29 @@
     uiDirty = true;
   }
 
+  function showOakTip() {
+    tipCooldown = 45;
+    const axe = heldTool() && heldTool().tool === 'axe';
+    document.getElementById('tip-text').textContent = axe
+      ? 'Oak is tough. Your Wooden Hatchet will take a long time. A Stone Hatchet chops oak about 5x faster.'
+      : 'Oak is tough and slow to chop by hand. Upgrade to a Stone Hatchet to chop oak about 5x faster.';
+    tipEl.hidden = false;
+    sfx.click();
+  }
+  document.getElementById('tip-close').addEventListener('click', () => { tipEl.hidden = true; });
+  document.getElementById('tip-recipe').addEventListener('click', () => {
+    tipEl.hidden = true;
+    craftFilter = 'Equipment';
+    highlightRecipe = 'stone_axe';
+    toggleInv(true);
+    requestAnimationFrame(() => document.querySelector('.recipe.focus')?.scrollIntoView({ block: 'center' }));
+  });
+
   function toggleInv(force) {
     const open = force === undefined ? invEl.hidden : force;
     invEl.hidden = !open;
     pickSlot = null;
+    if (!open) highlightRecipe = null;
     mouse.left = mouse.right = false;
     if (open) helpEl.hidden = true;
     uiDirty = true;
@@ -1251,6 +1875,7 @@
     [player.x, player.y] = d.p;
     selected = d.sel | 0;
     progress = d.progress || {};
+    scanChests();
     player.hp = typeof d.hp === 'number' ? d.hp : MAX_HP;
     return true;
   }
@@ -1268,6 +1893,8 @@
     selected = 0;
     player.hp = MAX_HP;
     spawn();
+    enemies = []; arrows = []; floaters = [];
+    spawnTimer = 30;
     computeLight();
     snapCamera();
     uiDirty = true;
