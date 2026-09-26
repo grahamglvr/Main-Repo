@@ -32,7 +32,7 @@ On touch screens, on-screen buttons appear. Tap the **Mine / Build** button to s
 
 ### Progression
 
-1. Chop trees for **logs**, and follow the gold arrow to **supply chests** in ruins and the open wasteland. Chests hold random equipment.
+1. Chop trees for **logs**, and follow the gold arrow to **supply chests** in ruins and the open wasteland. Chests hold random equipment, most likely the next tier up from what you already carry.
 2. Craft **planks** and a **workbench**, then wooden tools.
 3. Break bushes and leaves for **fibre**. Turn 2 fibre into **string**, and 2 string into **rope**.
 4. Use cobblestone and string for stone tools and a **furnace**.
@@ -60,7 +60,8 @@ Leaves and bushes drop fibre. Each piece of fibre has a 50% chance of coming wit
 ### Survival
 
 - You have **100 health**. **Mutant rats** and **ghouls** roam the surface and dark caves and hurt you on contact. Falls of more than 4 blocks also hurt.
-- Rats drop raw meat, which you can cook at a furnace. Ghouls drop scrap, string and rope.
+- **Crawlers** are pale, blind cave dwellers that spawn deep underground in the dark. They run from fire: placed torches, campfires and furnaces, or a torch in your hand.
+- Rats drop raw meat. Cook it on a **Campfire** (3 logs, 2 sticks) or in a furnace. Ghouls and crawlers drop string and rope.
 - At 0 health you wake up back at the start and keep your items.
 
 You can only mine blocks you can see: if a solid block sits between you and the target, the outline turns red and you have to clear the way first.

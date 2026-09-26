@@ -41,7 +41,7 @@
     AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, COBBLE: 4, LOG: 5, LEAVES: 6, PLANK: 7,
     COAL_ORE: 8, IRON_ORE: 9, SAND: 10, BENCH: 11, FURNACE: 12, BRICK: 13,
     GLASS: 14, TORCH: 15, LADDER: 16, BEDROCK: 17, BUSH: 18,
-    OAK_LOG: 19, OAK_LEAVES: 20, CHEST: 21, SCRAP: 22, ASH: 23,
+    OAK_LOG: 19, OAK_LEAVES: 20, CHEST: 21, SCRAP: 22, ASH: 23, CAMPFIRE: 24,
   };
   // hard: seconds to mine by hand. tier: tool tier needed (any pickaxe or hatchet counts).
   // pref: the tool that mines it at full speed ('pick' or 'axe'); other tools still help a little.
@@ -76,6 +76,7 @@
   def(B.CHEST, { name: 'Supply Chest', solid: false, hard: 1, pref: 'axe', cost: 1, sky: true });
   def(B.SCRAP, { name: 'Scrap Metal', hard: 1.6, tier: 1, pref: 'pick', drop: 'scrap' });
   def(B.ASH, { name: 'Ash', hard: 0.4, drop: 'dirt' });
+  def(B.CAMPFIRE, { name: 'Campfire', solid: false, hard: 0.8, pref: 'axe', drop: 'campfire', light: 13, cost: 1, sky: true });
 
   // ---------- Items ----------
   // cat: Equipment, Health, Resources or Building.
@@ -88,6 +89,7 @@
     sand: { name: 'Sand', block: B.SAND },
     bench: { name: 'Workbench', block: B.BENCH },
     furnace: { name: 'Furnace', block: B.FURNACE },
+    campfire: { name: 'Campfire', block: B.CAMPFIRE },
     brick: { name: 'Stone Bricks', block: B.BRICK },
     glass: { name: 'Glass', block: B.GLASS },
     torch: { name: 'Torch', block: B.TORCH },
@@ -158,7 +160,8 @@
     { out: 'brick', n: 4, needs: { cobble: 4 }, at: 'bench' },
     { out: 'glass', n: 1, needs: { sand: 1 }, at: 'furnace' },
     // Health
-    { out: 'cooked_meat', n: 1, needs: { raw_meat: 1 }, at: 'furnace' },
+    { out: 'campfire', n: 1, needs: { log: 3, stick: 2 } },
+    { out: 'cooked_meat', n: 1, needs: { raw_meat: 1 }, at: ['campfire', 'furnace'] },
     { out: 'bandage', n: 1, needs: { string: 2, fibre: 2 } },
     // Equipment: tools
     { out: 'wood_pick', n: 1, needs: { plank: 3, stick: 2 }, at: 'bench' },
@@ -178,9 +181,13 @@
     { out: 'stone_arrow', n: 8, needs: { stick: 2, cobble: 1 }, at: 'bench' },
     { out: 'iron_arrow', n: 8, needs: { stick: 2, iron_ingot: 1 }, at: 'bench' },
   ];
-  const STATION_BLOCK = { bench: B.BENCH, furnace: B.FURNACE };
+  const STATION_BLOCK = { bench: B.BENCH, furnace: B.FURNACE, campfire: B.CAMPFIRE };
+  // A recipe's `at` is one station or a list where any of them will do.
+  const stationsFor = r => r.at ? [].concat(r.at) : [];
 
-  // ---------- Pixel-art textures (16x16, drawn at 2x) ----------
+  // ---------- Pixel-art textures ----------
+  // Blocks are 32x32. Shapes are laid out on a 16-unit grid (each unit is 2x2 pixels),
+  // then refineTexture() adds single-pixel grain, highlights and details on top.
   function makeCanvas(size) {
     const c = document.createElement('canvas');
     c.width = c.height = size;
@@ -188,6 +195,7 @@
   }
   function painter(c, seed) {
     const g = c.getContext('2d');
+    if (c.width === 32) g.scale(2, 2);
     const rnd = mulberry32(seed);
     return {
       g, rnd,
@@ -224,7 +232,7 @@
   const TEX = [];
   function buildTextures() {
     for (let id = 1; id < BLOCK.length; id++) {
-      const c = makeCanvas(16), p = painter(c, id * 97 + 13);
+      const c = makeCanvas(32), p = painter(c, id * 97 + 13);
       switch (id) {
         case B.DIRT: p.fill('#7a5234'); p.speckle(['#5e3d25', '#8d6240', '#6c4a2f'], 0.3); break;
         case B.GRASS:
@@ -311,6 +319,13 @@
           [[2, 3], [5, 3], [10, 9], [13, 12]].forEach(([x, y]) => p.px(x, y, '#9a9ca0'));
           p.px(0, 7, '#3e2a1c', 16, 1);
           break;
+        case B.CAMPFIRE:
+          [[1, 13], [4, 14], [11, 14], [13, 13]].forEach(([x, y]) => { p.px(x, y, '#6e6f72', 3, 3); p.px(x, y, '#8b8d93', 3, 1); });
+          p.line(3, 14, 12, 10, '#6b4a2b', 2); p.line(3, 10, 12, 14, '#5a3d22', 2);
+          p.px(6, 12, '#2a1a10', 4, 2);
+          p.px(5, 6, '#ff8a2b', 6, 5); p.px(6, 4, '#ff8a2b', 4, 2); p.px(7, 2, '#ff8a2b', 2, 2);
+          p.px(6, 7, '#ffcc4d', 4, 4); p.px(7, 5, '#ffcc4d', 2, 2); p.px(7, 8, '#fff3b0', 2, 2);
+          break;
         case B.ASH: p.fill('#4a4744'); p.speckle(['#5d5955', '#383634', '#6a6560'], 0.45); break;
         case B.BUSH:
           p.px(2, 7, '#5a7a30', 12, 9); p.px(4, 5, '#5a7a30', 8, 2); p.px(1, 10, '#5a7a30', 14, 6);
@@ -319,16 +334,74 @@
           [[4, 8], [9, 7], [11, 11], [6, 12]].forEach(([x, y]) => { p.px(x, y, '#b3263a', 2, 2); p.px(x, y, '#e2566b'); });
           break;
       }
+      refineTexture(id, c);
       TEX[id] = c;
     }
+  }
+
+  const NATURAL = new Set([B.GRASS, B.DIRT, B.STONE, B.COAL_ORE, B.IRON_ORE, B.SAND, B.ASH, B.BEDROCK,
+    B.LOG, B.OAK_LOG, B.LEAVES, B.OAK_LEAVES, B.BUSH, B.COBBLE, B.SCRAP]);
+  const BUILT = new Set([B.PLANK, B.BRICK, B.FURNACE, B.CHEST, B.COBBLE, B.SCRAP]);
+  function refineTexture(id, c) {
+    const g = c.getContext('2d'), rnd = mulberry32(id * 31 + 7);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'source-atop'; // only paint over pixels that are already there
+    const dot = (x, y, col, w = 1, h = 1) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+    if (NATURAL.has(id)) {
+      for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+        const r = rnd();
+        if (r < 0.1) dot(x, y, 'rgba(255,255,255,0.08)');
+        else if (r < 0.22) dot(x, y, 'rgba(0,0,0,0.1)');
+      }
+    }
+    switch (id) {
+      case B.GRASS:
+        for (let x = 0; x < 32; x++) {
+          if (rnd() < 0.35) dot(x, 0, '#b5bd5a', 1, 1 + ((rnd() * 3) | 0));
+          if (rnd() < 0.2) dot(x, 5 + ((rnd() * 2) | 0), '#5e6a24');
+        }
+        // falls through to add pebbles in the dirt
+      case B.DIRT:
+        for (let k = 0; k < 5; k++) {
+          const x = (rnd() * 30) | 0, y = 10 + ((rnd() * 20) | 0);
+          dot(x, y, '#9a7550', 2, 1); dot(x, y + 1, '#4a301c', 2, 1);
+        }
+        break;
+      case B.STONE: case B.COAL_ORE: case B.IRON_ORE: case B.BEDROCK:
+        for (let k = 0; k < 3; k++) {
+          let x = (rnd() * 28) | 0, y = (rnd() * 28) | 0;
+          for (let i = 0; i < 6; i++) { dot(x, y, 'rgba(20,20,24,0.35)'); x += rnd() < 0.5 ? 1 : 0; y += 1; }
+        }
+        if (id !== B.STONE && id !== B.BEDROCK) {
+          for (let k = 0; k < 6; k++) dot((rnd() * 32) | 0, (rnd() * 32) | 0, 'rgba(255,255,240,0.45)');
+        }
+        break;
+      case B.LOG: case B.OAK_LOG:
+        for (let x = 0; x < 32; x += 2 + ((rnd() * 3) | 0)) dot(x, 0, 'rgba(0,0,0,0.12)', 1, 32);
+        break;
+      case B.PLANK:
+        [[1, 1], [30, 1], [1, 9], [30, 9], [1, 17], [30, 17], [1, 25], [30, 25]].forEach(([x, y]) => dot(x, y + 2, '#4a3420', 1, 1));
+        break;
+      case B.SAND:
+        for (let k = 0; k < 40; k++) dot((rnd() * 32) | 0, (rnd() * 32) | 0, rnd() < 0.5 ? '#f2e4b8' : '#b9a26a');
+        break;
+      case B.GLASS:
+        dot(4, 4, 'rgba(255,255,255,0.8)', 2, 1); dot(4, 5, 'rgba(255,255,255,0.8)', 1, 1);
+        break;
+    }
+    if (BUILT.has(id)) {
+      dot(0, 0, 'rgba(255,255,255,0.14)', 32, 1); dot(0, 0, 'rgba(255,255,255,0.1)', 1, 32);
+      dot(0, 31, 'rgba(0,0,0,0.22)', 32, 1); dot(31, 0, 'rgba(0,0,0,0.18)', 1, 32);
+    }
+    g.globalCompositeOperation = 'source-over';
   }
   // Darkened back walls shown behind dug-out areas underground.
   let WALL_DIRT, WALL_STONE;
   function buildWalls() {
     const dark = (src) => {
-      const c = makeCanvas(16), g = c.getContext('2d');
+      const c = makeCanvas(32), g = c.getContext('2d');
       g.drawImage(src, 0, 0);
-      g.fillStyle = 'rgba(10,12,16,0.62)'; g.fillRect(0, 0, 16, 16);
+      g.fillStyle = 'rgba(10,12,16,0.62)'; g.fillRect(0, 0, 32, 32);
       return c;
     };
     WALL_DIRT = dark(TEX[B.DIRT]);
@@ -698,7 +771,8 @@
     return found;
   }
   function canCraft(r, stations) {
-    if (r.at && !stations[r.at]) return false;
+    const at = stationsFor(r);
+    if (at.length && !at.some(st => stations[st])) return false;
     return Object.entries(r.needs).every(([id, n]) => count(id) >= n);
   }
   function craft(r) {
@@ -723,6 +797,7 @@
     ['stone_axe', 'Craft a Stone Hatchet. It cuts through tough oak trees.'],
     ['stone_pick', 'Craft a Stone Pickaxe at the Workbench.'],
     ['kill', 'Fight off a mutant. Hit it with a dagger or shoot it with a bow.'],
+    ['cooked_meat', 'Build a Campfire from logs and sticks, and cook raw meat on it.'],
     ['coal', 'Find coal ore (black specks) and make Torches.'],
     ['furnace', 'Craft a Furnace from 8 Cobblestone.'],
     ['iron_ingot', 'Smelt an Iron Ingot from iron ore or 3 scrap metal at a Furnace.'],
@@ -835,7 +910,7 @@
     [B.STONE]: 'stone', [B.COBBLE]: 'stone', [B.COAL_ORE]: 'stone', [B.IRON_ORE]: 'stone',
     [B.FURNACE]: 'stone', [B.BRICK]: 'stone', [B.BEDROCK]: 'stone',
     [B.LEAVES]: 'leaf', [B.BUSH]: 'leaf', [B.OAK_LEAVES]: 'leaf', [B.GLASS]: 'glass',
-    [B.OAK_LOG]: 'wood', [B.CHEST]: 'wood', [B.SCRAP]: 'stone',
+    [B.OAK_LOG]: 'wood', [B.CHEST]: 'wood', [B.SCRAP]: 'stone', [B.CAMPFIRE]: 'wood',
   };
   const materialOf = b => MATERIAL[b] || 'dirt';
   window.addEventListener('pointerdown', () => sfx.unlock(), true);
@@ -970,19 +1045,37 @@
     if (above === B.TORCH && !hasSupport(tx, ty - 1)) breakBlock(tx, ty - 1);
     computeLight();
   }
-  // Supply chests hold 2–3 random pieces of equipment. Better gear is rarer.
-  const LOOT = [
-    ['wood_dagger', 10], ['wood_pick', 8], ['wood_axe', 8], ['wood_arrow', 10, 6, 12],
-    ['stone_dagger', 6], ['stone_pick', 5], ['stone_axe', 5], ['stone_arrow', 7, 4, 10], ['wood_bow', 5],
-    ['oak_bow', 2], ['iron_dagger', 2], ['iron_pick', 1.5], ['iron_axe', 1.5], ['iron_arrow', 3, 3, 8], ['iron_bow', 0.7],
+  // Supply chests hold 2–3 random pieces of equipment. Each equipment line goes wood -> stone -> iron,
+  // and the chest favours the next tier up from the best you already carry in that line.
+  // Anything further up is rarer the bigger the jump, but never impossible.
+  const LOOT_LINES = [
+    { items: ['wood_pick', 'stone_pick', 'iron_pick'], weight: 1 },
+    { items: ['wood_axe', 'stone_axe', 'iron_axe'], weight: 1 },
+    { items: ['wood_dagger', 'stone_dagger', 'iron_dagger'], weight: 1 },
+    { items: ['wood_bow', 'oak_bow', 'iron_bow'], weight: 0.7 },
+    { items: ['wood_arrow', 'stone_arrow', 'iron_arrow'], weight: 1.2, min: [6, 4, 3], max: [12, 10, 8] },
   ];
-  const LOOT_TOTAL = LOOT.reduce((s, l) => s + l[1], 0);
+  const TIER_JUMP_WEIGHT = { 1: 10, 2: 1.2, 3: 0.3 }; // jump of 1 tier, 2 tiers, 3 tiers; same or lower tier: 2.5
+  function lootTable() {
+    const table = [];
+    for (const line of LOOT_LINES) {
+      let have = 0;
+      line.items.forEach((id, i) => { if (count(id) > 0) have = i + 1; });
+      line.items.forEach((id, i) => {
+        const jump = i + 1 - have;
+        const w = (jump <= 0 ? 2.5 : TIER_JUMP_WEIGHT[jump]) * line.weight;
+        table.push({ id, w, min: line.min ? line.min[i] : 1, max: line.max ? line.max[i] : 1 });
+      });
+    }
+    return table;
+  }
   function lootChest() {
     const found = [];
     const rolls = 2 + (Math.random() < 0.4 ? 1 : 0);
     for (let i = 0; i < rolls; i++) {
-      let r = Math.random() * LOOT_TOTAL;
-      const [id, , min = 1, max = 1] = LOOT.find(l => (r -= l[1]) < 0) || LOOT[0];
+      const table = lootTable(); // rebuilt each roll, so one chest rarely gives the same thing twice
+      let r = Math.random() * table.reduce((sum, l) => sum + l.w, 0);
+      const { id, min, max } = table.find(l => (r -= l.w) < 0) || table[0];
       const n = min + Math.floor(Math.random() * (max - min + 1));
       addItem(id, n);
       found.push(`${n > 1 ? n + ' × ' : ''}${ITEM[id].name}`);
@@ -1035,10 +1128,31 @@
 
   // ---------- Enemies and combat ----------
   const ENEMY = {
-    rat: { name: 'Mutant Rat', w: 0.9, h: 0.6, hp: 20, dmg: 6, speed: 3.4, jump: -9, drops: [['raw_meat', 1, 0.7]] },
-    ghoul: { name: 'Ghoul', w: 0.7, h: 1.7, hp: 45, dmg: 12, speed: 2.4, jump: -10.5,
+    rat: { name: 'Mutant Rat', w: 0.9, h: 0.6, hp: 20, dmg: 6, speed: 2.7, jump: -9, drops: [['raw_meat', 1, 0.7]] },
+    ghoul: { name: 'Ghoul', w: 0.7, h: 1.7, hp: 45, dmg: 12, speed: 1.9, jump: -10.5,
       drops: [['scrap', 1, 0.5], ['string', 1, 0.5], ['rope', 1, 0.15], ['raw_meat', 1, 0.3]] },
+    // Pale, blind cave dwellers. They live underground and run from fire.
+    crawler: { name: 'Crawler', w: 0.8, h: 1.2, hp: 35, dmg: 10, speed: 3.0, jump: -12, fearsFire: true,
+      drops: [['raw_meat', 1, 0.4], ['string', 1, 0.4], ['rope', 1, 0.2]] },
   };
+  const FIRE_RANGE = 7;
+  const FIRE_BLOCKS = new Set([B.TORCH, B.CAMPFIRE, B.FURNACE]);
+  // X position of the nearest fire within range (a placed fire, or a torch in the player's hand), or null.
+  function nearestFire(ex, ey) {
+    let best = null, bd = FIRE_RANGE;
+    const it = held();
+    if (it && it.id === 'torch') {
+      const [px, py] = centre(player), d = Math.hypot(px - ex, py - ey);
+      if (d < bd) { bd = d; best = px; }
+    }
+    const x0 = Math.floor(ex), y0 = Math.floor(ey);
+    for (let y = y0 - FIRE_RANGE; y <= y0 + FIRE_RANGE; y++) for (let x = x0 - FIRE_RANGE; x <= x0 + FIRE_RANGE; x++) {
+      if (!FIRE_BLOCKS.has(get(x, y))) continue;
+      const d = Math.hypot(x + 0.5 - ex, y + 0.5 - ey);
+      if (d < bd) { bd = d; best = x + 0.5; }
+    }
+    return best;
+  }
   const MAX_ENEMIES = 5, MELEE_REACH = 2.4;
   let enemies = [], arrows = [], floaters = [];
   let spawnTimer = 30, attackCooldown = 0, iframes = 0;
@@ -1072,7 +1186,8 @@
     const x = Math.floor(player.x + side * (18 + Math.random() * 16));
     if (x < 1 || x >= W - 1) return;
     let y, type;
-    if (Math.random() < 0.6) { // on the surface
+    const underground = player.y > surface[Math.floor(player.x)] + 4;
+    if (Math.random() < (underground ? 0.2 : 0.6)) { // on the surface
       y = 0;
       while (y < H && !BLOCK[get(x, y)].solid) y++;
       type = Math.random() < 0.7 ? 'rat' : 'ghoul';
@@ -1081,9 +1196,11 @@
       if (y < 1 || BLOCK[get(x, y)].solid) return;
       while (y < H && !BLOCK[get(x, y)].solid) y++;
       if (light[idx(x, y - 1)] > 6) return;
-      type = Math.random() < 0.5 ? 'rat' : 'ghoul';
+      if (y > surface[x] + 6) type = Math.random() < 0.75 ? 'crawler' : 'rat'; // deep underground
+      else type = Math.random() < 0.5 ? 'rat' : 'ghoul';
     }
     const d = ENEMY[type];
+    if (d.fearsFire && nearestFire(x + 0.5, y - 1) !== null) return;
     const e = { type, x: x + 0.5 - d.w / 2, y: y - d.h - 0.01, w: d.w, h: d.h, vx: 0, vy: 0, kb: 0,
       hp: d.hp, max: d.hp, face: -side, flash: 0, wander: 0, wanderT: 0, onGround: false };
     if (y >= H || boxHits(e.x, e.y, e.w, e.h)) return;
@@ -1098,8 +1215,11 @@
       const d = ENEMY[e.type];
       const [ecx, ecy] = centre(e);
       const dx = pcx - ecx, dy = pcy - ecy;
-      let dir;
-      if (Math.abs(dx) < 16 && Math.abs(dy) < 8) dir = Math.abs(dx) > 0.3 ? Math.sign(dx) : 0; // chase
+      let dir, speed = d.speed;
+      const fire = d.fearsFire ? nearestFire(ecx, ecy) : null;
+      e.fleeing = fire !== null;
+      if (e.fleeing) { dir = ecx < fire ? -1 : 1; speed *= 1.3; } // run away from the flames
+      else if (Math.abs(dx) < 16 && Math.abs(dy) < 8) dir = Math.abs(dx) > 0.3 ? Math.sign(dx) : 0; // chase
       else {
         e.wanderT -= dt;
         if (e.wanderT <= 0) { e.wander = [-1, 0, 1][(Math.random() * 3) | 0]; e.wanderT = 2 + Math.random() * 3; }
@@ -1107,11 +1227,11 @@
       }
       if (dir) e.face = dir;
       e.kb -= e.kb * Math.min(1, dt * 6);
-      e.vx = dir * d.speed + e.kb;
+      e.vx = dir * speed + e.kb;
       stepBody(e, dt);
       if (e.blocked && e.onGround) e.vy = d.jump;
       e.flash = Math.max(0, e.flash - dt);
-      if (iframes <= 0 && overlaps(e, player)) {
+      if (iframes <= 0 && !e.fleeing && overlaps(e, player)) {
         iframes = 0.8;
         player.kb = Math.sign(dx || 1) * 9;
         player.vy = -5;
@@ -1308,6 +1428,7 @@
 
     updateEnemies(dt);
     updateArrows(dt);
+    updateAsh(dt);
 
     // Camera eases toward the player.
     const tx = (player.x + player.w / 2) * TILE - viewW / 2;
@@ -1434,13 +1555,8 @@
       ctx.fillStyle = '#e8e2c8'; ctx.fillRect(x - ux * 18 - 2, y - uy * 18 - 2, 3, 3);
     }
 
-    // Darkness
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      const L = light[idx(x, y)];
-      if (L >= 15) continue;
-      ctx.fillStyle = `rgba(6,8,12,${((1 - L / 15) * 0.9).toFixed(3)})`;
-      ctx.fillRect(x * TILE - cx, y * TILE - cy, TILE, TILE);
-    }
+    drawShade(x0, y0, x1, y1, cx, cy);
+    drawFireGlow(x0, y0, x1, y1, cx, cy);
 
     // Target highlight and cracks
     if (mouse.over && !invOpen()) {
@@ -1458,6 +1574,7 @@
       }
       if (!mouse.touch) drawCrosshair(mouse.x, mouse.y);
     }
+    drawAsh();
     drawChestFinder(cx, cy);
 
     // Floating damage numbers and pickups
@@ -1489,6 +1606,81 @@
     ctx.fillStyle = '#e8b83a';
     ctx.fillRect(x - 5, y - 1, 10, 2);
     ctx.fillRect(x - 1, y - 5, 2, 10);
+  }
+
+  // Darkness: one pixel per tile, scaled up with smoothing so light fades softly across tiles.
+  let shadeCanvas = null, shadeCtx = null, shadeImg = null;
+  function drawShade(x0, y0, x1, y1, cx, cy) {
+    const lw = x1 - x0 + 3, lh = y1 - y0 + 3; // one tile of margin on each side
+    if (!shadeCanvas || shadeCanvas.width !== lw || shadeCanvas.height !== lh) {
+      shadeCanvas = document.createElement('canvas');
+      shadeCanvas.width = lw; shadeCanvas.height = lh;
+      shadeCtx = shadeCanvas.getContext('2d');
+      shadeImg = shadeCtx.createImageData(lw, lh);
+    }
+    const d = shadeImg.data;
+    for (let j = 0; j < lh; j++) for (let i = 0; i < lw; i++) {
+      const tx = Math.max(0, Math.min(W - 1, x0 - 1 + i)), ty = y0 - 1 + j;
+      const L = ty < 0 ? 15 : ty >= H ? 0 : light[idx(tx, ty)];
+      const k = (j * lw + i) * 4;
+      d[k] = 6; d[k + 1] = 8; d[k + 2] = 12;
+      d[k + 3] = Math.round((1 - L / 15) * 0.9 * 255);
+    }
+    shadeCtx.putImageData(shadeImg, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(shadeCanvas, (x0 - 1) * TILE - cx, (y0 - 1) * TILE - cy, lw * TILE, lh * TILE);
+    ctx.imageSmoothingEnabled = false;
+  }
+
+  // Warm, flickering glow around fires, drawn over the darkness. Campfires get animated flames.
+  function drawFireGlow(x0, y0, x1, y1, cx, cy) {
+    const now = performance.now() / 1000;
+    ctx.globalCompositeOperation = 'lighter';
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const b = tiles[idx(x, y)];
+      if (b !== B.TORCH && b !== B.CAMPFIRE && b !== B.FURNACE) continue;
+      const gx = (x + 0.5) * TILE - cx, gy = (y + (b === B.TORCH ? 0.25 : 0.6)) * TILE - cy;
+      const flick = 1 + Math.sin(now * 9 + x * 3.1) * 0.05 + Math.sin(now * 23 + y) * 0.03;
+      const r = (b === B.CAMPFIRE ? 3.2 : b === B.TORCH ? 2.4 : 1.8) * TILE * flick;
+      const glow = ctx.createRadialGradient(gx, gy, 2, gx, gy, r);
+      glow.addColorStop(0, 'rgba(255,170,80,0.32)');
+      glow.addColorStop(1, 'rgba(255,120,40,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(gx - r, gy - r, r * 2, r * 2);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      if (tiles[idx(x, y)] !== B.CAMPFIRE) continue;
+      const bx = x * TILE - cx, by = y * TILE - cy;
+      for (let k = 0; k < 4; k++) {
+        const fh = 8 + (Math.sin(now * 11 + k * 1.7 + x) + 1) * 5;
+        const fx = bx + 9 + k * 4;
+        ctx.fillStyle = k % 2 ? '#ff8a2b' : '#ffb347';
+        ctx.fillRect(fx, by + 22 - fh, 4, fh);
+        ctx.fillStyle = '#fff3b0';
+        ctx.fillRect(fx + 1, by + 22 - fh * 0.5, 2, fh * 0.4);
+      }
+    }
+  }
+
+  // Ash drifting through the air on the surface.
+  const ash = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), s: Math.random() }));
+  function updateAsh(dt) {
+    for (const a of ash) {
+      a.x += (0.012 + a.s * 0.02) * dt + Math.sin(performance.now() / 900 + a.s * 10) * 0.0004;
+      a.y += (0.02 + a.s * 0.03) * dt;
+      if (a.x > 1) a.x -= 1;
+      if (a.y > 1) { a.y -= 1; a.x = Math.random(); }
+    }
+  }
+  function drawAsh() {
+    const L = light[idx(Math.floor(player.x + player.w / 2), Math.max(0, Math.floor(player.y)))] / 15;
+    if (L <= 0.2) return; // none in caves
+    for (const a of ash) {
+      ctx.fillStyle = `rgba(225,215,200,${(0.25 + a.s * 0.35) * L})`;
+      const size = a.s > 0.7 ? 3 : 2;
+      ctx.fillRect(Math.round(a.x * viewW), Math.round(a.y * viewH), size, size);
+    }
   }
 
   function drawCracks(sx, sy, f) {
@@ -1532,6 +1724,26 @@
       ctx.fillStyle = '#3e342e';
       ctx.fillRect(-w / 2 + 3 + step, h - 4, 4, 4);
       ctx.fillRect(w / 2 - 12 - step, h - 4, 4, 4);
+    } else if (e.type === 'crawler') {
+      // Hunched and pale, on long bony limbs, with dark empty eye sockets
+      const SK = '#d9d4c8', SH = '#aaa396';
+      ctx.fillStyle = SH;
+      ctx.fillRect(-w / 2 + 1 + step, h - 12, 3, 12);      // back leg
+      ctx.fillRect(w / 2 - 6 - step, h - 12, 3, 12);       // front arm reaching down
+      ctx.fillStyle = SK;
+      ctx.fillRect(-w / 2, h - 22, w - 4, 11);             // hunched back
+      ctx.fillRect(-w / 2 + 2, h - 25, w - 10, 4);         // spine hump
+      ctx.fillStyle = SH;
+      for (let i = 0; i < 4; i++) ctx.fillRect(-w / 2 + 3 + i * 5, h - 24, 2, 2); // ridges of the spine
+      ctx.fillStyle = SK;
+      ctx.fillRect(w / 2 - 8, h - 30, 11, 11);             // head, low and forward
+      ctx.fillRect(-w / 2 + 4 - step, h - 12, 3, 12);      // near leg
+      ctx.fillRect(w / 2 - 2 + step, h - 12, 3, 12);       // near arm
+      ctx.fillStyle = '#0c0b0a';
+      ctx.fillRect(w / 2 - 2, h - 27, 3, 3);               // eye socket
+      ctx.fillRect(w / 2 - 1, h - 21, 4, 1);               // mouth
+      ctx.fillStyle = '#6e1f1f';
+      ctx.fillRect(w / 2, h - 20, 2, 1);
     } else {
       ctx.fillStyle = '#3a3230'; // legs
       ctx.fillRect(-7 + step, h - 18, 6, 18);
@@ -1692,7 +1904,7 @@
     }
     const st = nearStations();
     lastStationKey = Object.keys(st).join();
-    stationsEl.textContent = `near: ${['bench', 'furnace'].filter(s => st[s]).map(s => ITEM[s].name).join(', ') || 'nothing'}`;
+    stationsEl.textContent = `near: ${['bench', 'furnace', 'campfire'].filter(s => st[s]).map(s => ITEM[s].name).join(', ') || 'nothing'}`;
     tabsEl.replaceChildren();
     for (const c of ['All', ...CATS]) {
       const b = document.createElement('button');
@@ -1745,8 +1957,8 @@
       }
       if (r.at) {
         const s = document.createElement('span');
-        s.className = 'station' + (st[r.at] ? '' : ' miss');
-        s.textContent = `at ${ITEM[r.at].name}`;
+        s.className = 'station' + (stationsFor(r).some(x => st[x]) ? '' : ' miss');
+        s.textContent = `at ${stationsFor(r).map(st => ITEM[st].name).join(' or ')}`;
         needs.append(s);
       }
       mid.append(needs);
