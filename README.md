@@ -65,6 +65,7 @@ Leaves and bushes drop fibre. Each piece of fibre has a 50% chance of coming wit
 - Creatures wander at random and only chase you when you're within about 10 blocks and nothing solid blocks their view.
 - **Crawlers** are pale, blind cave dwellers that spawn deep underground in the dark. They run from fire: placed torches, campfires and furnaces, or a torch in your hand.
 - Rats drop raw meat. Cook it on a **Campfire** (3 logs, 2 sticks) or in a furnace. Ghouls and crawlers drop string and rope.
+- You also have **100 stamina**. Jumps (8), each tool swing (2), dagger hits (8) and bow shots (10) use it; walking doesn't. It refills after you rest for about a second.
 - At 0 health you wake up back at the start and keep your items.
 
 You can only mine blocks you can see: if a solid block sits between you and the target, the outline turns red and you have to clear the way first.

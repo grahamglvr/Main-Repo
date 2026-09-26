@@ -441,15 +441,51 @@
     p.px(10, 2, head, 5, 6); p.px(14, 3, head, 1, 5); p.px(9, 3, head, 1, 3);
     p.px(14, 2, headDark, 1, 7);
   }
-  const ICON = {};   // item id -> canvas
+  // Item icons are drawn twice from the same pixel art: 32x32 for menus and the hotbar,
+  // and 16x16 for the item in the player's hand. Both get the sprite treatment:
+  // fine grain, light on top edges, shade on bottom edges and a dark outline.
+  const ICON = {};       // item id -> 32x32 canvas
+  const ICON_HAND = {};  // item id -> 16x16 canvas
   const ICON_URL = {};
+  function polishIcon(c, grain) {
+    const g = c.getContext('2d'), n = c.width;
+    const img = g.getImageData(0, 0, n, n), d = img.data, src = new Uint8ClampedArray(d);
+    const a = (x, y) => (x < 0 || y < 0 || x >= n || y >= n) ? 0 : src[(y * n + x) * 4 + 3];
+    const rnd = mulberry32(n * 7 + grain);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const k = (y * n + x) * 4;
+      if (src[k + 3] > 0) {
+        let f = 1;
+        if (!a(x, y - 1) || !a(x - 1, y)) f = 1.2;        // lit edge
+        else if (!a(x, y + 1) || !a(x + 1, y)) f = 0.78;  // shaded edge
+        if (grain && f === 1) f = 0.94 + rnd() * 0.12;    // subtle surface grain
+        d[k] = Math.min(255, src[k] * f); d[k + 1] = Math.min(255, src[k + 1] * f); d[k + 2] = Math.min(255, src[k + 2] * f);
+      } else if (a(x - 1, y) || a(x + 1, y) || a(x, y - 1) || a(x, y + 1)) {
+        d[k] = 14; d[k + 1] = 11; d[k + 2] = 9; d[k + 3] = 230; // outline
+      }
+    }
+    g.putImageData(img, 0, 0);
+  }
   function buildIcons() {
     for (const id in ITEM) {
       const it = ITEM[id];
-      let c;
-      if (it.block || it.iconBlock) c = TEX[it.block || it.iconBlock];
-      else {
-        c = makeCanvas(16);
+      if (it.block || it.iconBlock) {
+        ICON[id] = TEX[it.block || it.iconBlock];
+        const small = makeCanvas(16);
+        small.getContext('2d').drawImage(ICON[id], 0, 0, 16, 16);
+        ICON_HAND[id] = small;
+      } else {
+        ICON[id] = paintItem(id, it, makeCanvas(32));
+        ICON_HAND[id] = paintItem(id, it, makeCanvas(16));
+        polishIcon(ICON[id], id.length);
+        polishIcon(ICON_HAND[id], 0);
+      }
+      ICON_URL[id] = ICON[id].toDataURL();
+    }
+  }
+  function paintItem(id, it, c) {
+    {
+      {
         const p = painter(c, id.length * 31);
         switch (id) {
           case 'stick': p.line(4, 13, 12, 3, '#8d6240', 2); p.line(4, 14, 12, 4, '#5e3d25'); break;
@@ -514,8 +550,7 @@
             break;
         }
       }
-      ICON[id] = c;
-      ICON_URL[id] = c.toDataURL();
+      return c;
     }
   }
 
@@ -705,7 +740,7 @@
   }
 
   // ---------- Player ----------
-  const player = { x: 0, y: 0, w: 0.7, h: 1.7, vx: 0, vy: 0, onGround: false, face: 1, walk: 0, hp: 100, kb: 0, swing: 0 };
+  const player = { x: 0, y: 0, w: 0.7, h: 1.7, vx: 0, vy: 0, onGround: false, face: 1, walk: 0, hp: 100, st: 100, kb: 0, swing: 0 };
   function spawn() {
     const x = Math.floor(W / 2);
     let y = 0;
@@ -1138,6 +1173,7 @@
     if (player.hp === 0) {
       spawn();
       player.hp = MAX_HP;
+      player.st = MAX_ST;
       enemies = []; arrows = [];
       iframes = 2;
       snapCamera();
@@ -1306,7 +1342,34 @@
     return enemies.find(e => !e.dead && m.x > e.x - 0.25 && m.x < e.x + e.w + 0.25 && m.y > e.y - 0.25 && m.y < e.y + e.h + 0.25);
   }
 
+  // ---------- Stamina ----------
+  // Jumping, swinging a tool and using weapons cost stamina; walking is free.
+  // It refills after a short pause from exertion.
+  const MAX_ST = 100, ST_REGEN = 22, ST_PAUSE = 0.9;
+  const ST_COST = { jump: 8, swing: 2, melee: 8, bow: 10 };
+  let staminaWait = 0, tiredToastT = 0;
+  function spend(what) {
+    const n = ST_COST[what];
+    if (player.st < n) {
+      if (tiredToastT <= 0) {
+        toast('Out of breath. Rest a moment.');
+        tiredToastT = 3;
+        staminaEl.classList.remove('empty'); void staminaEl.offsetWidth; staminaEl.classList.add('empty');
+      }
+      return false;
+    }
+    player.st -= n;
+    staminaWait = ST_PAUSE;
+    return true;
+  }
+  function updateStamina(dt) {
+    staminaWait -= dt;
+    tiredToastT -= dt;
+    if (staminaWait <= 0) player.st = Math.min(MAX_ST, player.st + ST_REGEN * dt);
+  }
+
   function melee(e) {
+    if (!spend('melee')) { attackCooldown = 0.3; return; }
     const it = held() && ITEM[held().id];
     const dmg = it && it.melee ? it.melee : it && it.tool ? 4 : 2;
     attackCooldown = it && it.melee ? 0.35 : 0.5;
@@ -1320,6 +1383,7 @@
     attackCooldown = 0.55;
     const ammo = ARROWS.find(a => count(a) > 0);
     if (!ammo) { toast('You have no arrows. Craft some or find them in supply chests.'); sfx.denied(); return; }
+    if (!spend('bow')) return;
     removeItem(ammo, 1);
     const ox = player.x + player.w / 2, oy = player.y + 0.6, m = mouseWorld();
     const ang = Math.atan2(m.y - oy, m.x - ox);
@@ -1371,7 +1435,7 @@
       player.vy = up ? -5 : down ? 5 : 0;
     } else {
       player.vy = Math.min(player.vy + GRAVITY * dt, MAX_FALL);
-      if (up && player.onGround) { player.vy = JUMP; sfx.jump(); }
+      if (up && player.onGround && spend('jump')) { player.vy = JUMP; sfx.jump(); }
     }
     const fallSpeed = player.vy;
 
@@ -1434,10 +1498,13 @@
           if (!mining.warned) { toast(bd.tier < 99 ? `${bd.name} needs ${tierName(bd.tier)}` : 'Bedrock cannot be broken'); sfx.denied(); }
           mining.warned = true;
         } else {
-          // Tick sound on each swing of the arm.
-          if (mining.t === 0 || Math.floor(mining.t / 0.25) !== Math.floor((mining.t + dt) / 0.25)) sfx.hit(materialOf(b));
-          mining.t += dt;
-          if (mining.t >= mineTime(b)) { breakBlock(t.tx, t.ty); mining.t = 0; }
+          // Each swing of the arm (every 0.25s) makes a sound and costs stamina.
+          const swingDue = mining.t === 0 || Math.floor(mining.t / 0.25) !== Math.floor((mining.t + dt) / 0.25);
+          if (!swingDue || spend('swing')) {
+            if (swingDue) sfx.hit(materialOf(b));
+            mining.t += dt;
+            if (mining.t >= mineTime(b)) { breakBlock(t.tx, t.ty); mining.t = 0; }
+          }
         }
       }
     } else mining.t = 0;
@@ -1463,6 +1530,7 @@
       }
     }
 
+    updateStamina(dt);
     updateEnemies(dt);
     updateArrows(dt);
     updateAsh(dt);
@@ -1558,7 +1626,7 @@
     ctx.moveTo(12 + bob, 0); ctx.lineTo(-6 + bob, -9); ctx.lineTo(-6 + bob, 9);
     ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
-    ctx.font = '12px "Silkscreen", ui-monospace, monospace';
+    ctx.font = '600 13px "Chakra Petch", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.lineWidth = 3;
     ctx.strokeText(`chest ${Math.round(bd)}m`, ex, ey + 24);
@@ -1609,10 +1677,25 @@
     for (const a of arrows) {
       const sp = Math.hypot(a.vx, a.vy), ux = a.vx / sp, uy = a.vy / sp;
       const x = a.x * TILE - cx, y = a.y * TILE - cy;
-      ctx.strokeStyle = '#8d6240'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(x - ux * 18, y - uy * 18); ctx.lineTo(x, y); ctx.stroke();
-      ctx.fillStyle = a.tip; ctx.fillRect(x - 2, y - 2, 4, 4);
-      ctx.fillStyle = '#e8e2c8'; ctx.fillRect(x - ux * 18 - 2, y - uy * 18 - 2, 3, 3);
+      const nx = -uy, ny = ux; // perpendicular, for the tip and fletching
+      ctx.lineCap = 'butt';
+      ctx.strokeStyle = 'rgba(14,11,9,0.85)'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(x - ux * 20, y - uy * 20); ctx.lineTo(x, y); ctx.stroke();
+      ctx.strokeStyle = '#9a6e44'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x - ux * 20, y - uy * 20); ctx.lineTo(x, y); ctx.stroke();
+      ctx.strokeStyle = '#c49a5e'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x - ux * 18, y - uy * 18 - 0.5); ctx.lineTo(x - ux * 2, y - uy * 2 - 0.5); ctx.stroke();
+      ctx.fillStyle = a.tip; // arrowhead
+      ctx.beginPath();
+      ctx.moveTo(x + ux * 5, y + uy * 5); ctx.lineTo(x + nx * 3, y + ny * 3); ctx.lineTo(x - nx * 3, y - ny * 3);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(14,11,9,0.85)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = '#e8e2c8'; // fletching
+      for (const sgn of [1, -1]) {
+        ctx.beginPath();
+        ctx.moveTo(x - ux * 14, y - uy * 14); ctx.lineTo(x - ux * 21 + nx * 4 * sgn, y - uy * 21 + ny * 4 * sgn); ctx.lineTo(x - ux * 19, y - uy * 19);
+        ctx.closePath(); ctx.fill();
+      }
     }
 
     drawShade(x0, y0, x1, y1, cx, cy);
@@ -1638,7 +1721,7 @@
     drawChestFinder(cx, cy);
 
     // Floating damage numbers and pickups
-    ctx.font = '14px "Silkscreen", ui-monospace, monospace';
+    ctx.font = '700 15px "Chakra Petch", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'rgba(10,8,6,0.8)';
@@ -1973,7 +2056,7 @@
       R(g, SKIN, -2, 0, 5, 16); R(g, SKIN_SH, -2, 0, 1, 16); R(g, SKIN_HI, 2, 2, 1, 6);
       R(g, SKIN_SH, -2, 13, 5, 3);
       const it = held();
-      if (it) g.drawImage(ICON[it.id], -2, 6, 18, 18);
+      if (it) g.drawImage(ICON_HAND[it.id], -1, 7, 16, 16);
       g.restore();
     });
   }
@@ -1988,6 +2071,57 @@
   const goalEl = document.getElementById('goal-text');
   const toastEl = document.getElementById('toast');
   const healthEl = document.getElementById('health');
+  const staminaEl = document.getElementById('stamina');
+  const staminaFill = document.getElementById('stamina-fill');
+  const staminaText = document.getElementById('stamina-text');
+  let shownSt = -1;
+  // Stamina changes every frame, so its bar is updated on its own instead of re-rendering the whole HUD.
+  function drawStaminaBar() {
+    const v = Math.round(player.st);
+    if (v === shownSt) return;
+    shownSt = v;
+    staminaFill.style.width = `${player.st}%`;
+    staminaText.textContent = `${v} / ${MAX_ST}`;
+    staminaEl.setAttribute('aria-valuenow', v);
+  }
+
+  // Random hints beside the goal. They change every 15 seconds, or when clicked.
+  const TIPS = [
+    'Hatchets chop wood fastest. Pickaxes are best on stone and ore.',
+    'Oak trees drop two logs per block, but you need a Stone Hatchet to chop them quickly.',
+    'Crawlers are terrified of fire. Hold a torch when you explore deep caves.',
+    'Place a Campfire near your base. It cooks meat and keeps crawlers away.',
+    'Supply chests usually hold the next tier of gear up from what you carry.',
+    'Walking is free, but jumping, swinging and fighting use stamina.',
+    'Out of breath? Stop for a moment and your stamina refills.',
+    'Break bushes and leaves for fibre. Each piece might come with berries.',
+    'Two fibre make a string. Two string make a rope.',
+    'Scrap metal from the ruins can be smelted into iron: 3 scrap and 1 coal at a Furnace.',
+    'Bandages heal 30 health and only need string and fibre.',
+    'Cooked meat heals 25. Rats drop raw meat.',
+    'Creatures only chase you when they can see you. Break line of sight to lose them.',
+    'Falling more than 4 blocks hurts. Build ladders to get down safely.',
+    'Bows shoot your best arrows first. Iron arrows hit hardest.',
+    'Keep a torch in your hotbar for dark caves.',
+    'Iron ore is deep underground and needs a stone tool or better.',
+    'Recipes you can make right now are listed first in the crafting menu.',
+    'Press E to open your inventory and crafting.',
+    'Ruins often hide a supply chest inside their broken walls.',
+  ];
+  const tipLine = document.getElementById('tip-line');
+  let tipIndex = Math.floor(Math.random() * TIPS.length), tipTimer = 0;
+  function nextTip() {
+    let n;
+    do n = Math.floor(Math.random() * TIPS.length); while (n === tipIndex && TIPS.length > 1);
+    tipIndex = n;
+    tipLine.classList.add('fade');
+    setTimeout(() => { tipLine.textContent = TIPS[tipIndex]; tipLine.classList.remove('fade'); }, 350);
+    clearInterval(tipTimer);
+    tipTimer = setInterval(nextTip, 15000);
+  }
+  tipLine.textContent = TIPS[tipIndex];
+  tipTimer = setInterval(nextTip, 15000);
+  document.getElementById('tips').addEventListener('click', nextTip);
   const tabsEl = document.getElementById('craft-tabs');
   const tipEl = document.getElementById('tip');
   let craftFilter = 'All', highlightRecipe = null, tipCooldown = 0;
@@ -2284,6 +2418,7 @@
     progress = {};
     selected = 0;
     player.hp = MAX_HP;
+    player.st = MAX_ST;
     spawn();
     enemies = []; arrows = []; floaters = [];
     spawnTimer = 30;
@@ -2319,6 +2454,7 @@
       render();
       if (invOpen() && Object.keys(nearStations()).join() !== lastStationKey) uiDirty = true;
       if (uiDirty) renderUI();
+      drawStaminaBar();
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);

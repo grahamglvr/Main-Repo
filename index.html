@@ -6,14 +6,19 @@
 <title>Blockstead</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Silkscreen&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <canvas id="game" aria-label="Game world"></canvas>
 
 <div id="hud-top">
-  <div id="goal" class="panel"><span class="label">Next goal</span><span id="goal-text"></span></div>
+  <div class="hud-left">
+    <div id="goal" class="panel"><span class="label">Next goal</span><span id="goal-text"></span></div>
+    <button id="tips" class="panel" type="button" title="Show another tip">
+      <span class="label">Tip</span><span id="tip-line"></span>
+    </button>
+  </div>
   <div id="menu" class="panel">
     <button id="btn-inv" type="button" title="Inventory and crafting (E)">Craft</button>
     <button id="btn-sound" type="button" title="Turn sound on or off (M)">Sound on</button>
@@ -41,6 +46,7 @@
   <p>Pickaxes mine stone fastest and hatchets chop wood fastest, but either works on both. Oak needs a Stone Hatchet or better to chop quickly.</p>
   <p>Mutant rats and ghouls attack on contact. Deep underground, pale crawlers hunt in the dark, but they run from fire: carry a torch or stay near a campfire. Falling more than 4 blocks also hurts.</p>
   <p>Heal with berries, bandages, or raw meat cooked on a Campfire.</p>
+  <p>Jumping, swinging tools and fighting use stamina. Walking doesn't. Pause for a moment and it refills.</p>
   <p>You can only mine blocks you can see. Clear anything in the way first.</p>
   <p>Some recipes need a Workbench or Furnace placed within 4 blocks of you.</p>
   <button id="btn-help-close" type="button">Start playing</button>
@@ -71,10 +77,17 @@
   </div>
 </div>
 
-<div id="health" role="meter" aria-label="Health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
-  <span class="label">Health</span>
-  <div class="track"><div id="health-fill"></div></div>
-  <span id="health-text">100 / 100</span>
+<div id="vitals">
+  <div id="health" class="bar" role="meter" aria-label="Health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+    <span class="label">Health</span>
+    <div class="track"><div id="health-fill"></div></div>
+    <span id="health-text">100 / 100</span>
+  </div>
+  <div id="stamina" class="bar" role="meter" aria-label="Stamina" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+    <span class="label">Stamina</span>
+    <div class="track"><div id="stamina-fill"></div></div>
+    <span id="stamina-text">100 / 100</span>
+  </div>
 </div>
 <div id="tip" class="panel" role="dialog" aria-labelledby="tip-title" hidden>
   <span class="label" id="tip-title">Upgrade your hatchet</span>
