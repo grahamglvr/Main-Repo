@@ -30,12 +30,13 @@
     <dt>W / Space</dt><dd>Jump, climb ladders</dd>
     <dt>S</dt><dd>Climb down</dd>
     <dt>Hold left click</dt><dd>Mine a block</dd>
-    <dt>Right click</dt><dd>Place the selected block</dd>
+    <dt>Right click</dt><dd>Place the selected block, or eat berries</dd>
     <dt>1–9 / wheel</dt><dd>Pick a hotbar slot</dd>
     <dt>E</dt><dd>Inventory and crafting</dd>
     <dt>M</dt><dd>Sound on or off</dd>
     <dt>H</dt><dd>Show or hide this panel</dd>
   </dl>
+  <p>Pickaxes mine stone fastest and hatchets chop wood fastest, but either works on both. Falling more than 4 blocks hurts. Eat berries from bushes and leaves to heal.</p>
   <p>You can only mine blocks you can see. Clear anything in the way first.</p>
   <p>Some recipes need a Workbench or Furnace placed within 4 blocks of you.</p>
   <button id="btn-help-close" type="button">Start playing</button>
@@ -53,6 +54,11 @@
   </div>
 </div>
 
+<div id="health" role="meter" aria-label="Health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+  <span class="label">Health</span>
+  <div class="track"><div id="health-fill"></div></div>
+  <span id="health-text">100 / 100</span>
+</div>
 <div id="hotbar"></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
