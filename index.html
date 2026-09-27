@@ -41,6 +41,8 @@
     <dt>1–9 / wheel</dt><dd>Pick a hotbar slot</dd>
     <dt>E</dt><dd>Inventory and crafting</dd>
     <dt>M</dt><dd>Sound on or off</dd>
+    <dt>F</dt><dd>Use: open a chest or machine, or use what you're holding</dd>
+    <dt>Q</dt><dd>Quick heal with your best-fitting healing item</dd>
     <dt>K</dt><dd>Show or hide key prompts</dd>
     <dt>H</dt><dd>Show or hide this panel</dd>
   </dl>
@@ -52,6 +54,7 @@
   <p>Jumping, swinging tools and fighting use stamina. Walking doesn't. Pause for a moment and it refills.</p>
   <p>You can only mine blocks you can see. Clear anything in the way first.</p>
   <p>Deep underground, sealed brick rooms hide glowing Irn Bru machines. Right click one for cans. A can gives unlimited stamina and 50 extra health for a minute.</p>
+  <p>Endgame: build a base, forge a Claymore, craft The Persuader and the Irn Bru Shield, keep 3 cans of Irn Bru, then craft the Bagpipes and play them in the Haggis lair at the bottom of the world. The checklist is in your inventory.</p>
   <p>Some recipes need a Workbench or Furnace placed within 4 blocks of you.</p>
   <button id="btn-help-close" type="button">Start playing</button>
 </div>
@@ -109,6 +112,19 @@
     <button id="tip-close" type="button">Keep chopping</button>
   </div>
 </div>
+<div id="bossbar" class="panel" hidden>
+  <span class="label">Mutant Haggis</span>
+  <div class="track"><div id="boss-fill"></div></div>
+</div>
+<div id="victory" role="dialog" aria-modal="true" aria-labelledby="victory-title" hidden>
+  <div class="panel story-panel">
+    <span class="label">The Big Haggis Hunt</span>
+    <h2 id="victory-title">Ya dancer! The Mutant Haggis is deid.</h2>
+    <p>The pipes have stopped. The lair's quiet. Somewhere, Wee Davie is greetin' wi' pride.</p>
+    <p>Ye've got five Haggis Suppers in yer bag, and the wasteland's yours. Build whatever ye like, big man.</p>
+    <button id="victory-go" type="button">Keep playing</button>
+  </div>
+</div>
 <div id="speech" role="status" aria-live="polite" hidden></div>
 <div id="radio" class="panel" role="status" aria-live="polite" hidden>
   <span class="label">Radio · Wee Davie</span>
@@ -127,8 +143,10 @@
     </header>
     <div class="inv-body">
       <section>
-        <p class="hint">Click one slot, then another, to move or swap items. The top row is your hotbar.</p>
+        <p class="hint">Drag items between slots, or click one slot and then another, to move or swap them. The top row is your hotbar.</p>
         <div id="inv-grid"></div>
+        <h3 class="hunt-title">The Big Haggis Hunt</h3>
+        <ol id="hunt-list"></ol>
       </section>
       <section>
         <h3>Crafting <span id="stations"></span></h3>

@@ -24,14 +24,18 @@ python3 -m http.server 8000
 | W / Space | Jump, climb ladders |
 | S | Climb down |
 | Hold left click | Mine a block, attack, or shoot a bow |
-| Right click | Place a block, open a supply chest, or eat or heal |
+| Right click | Place a block, open a chest or machine, eat, drink, heal, or play the Bagpipes |
 | 1–9 / mouse wheel | Pick a hotbar slot |
 | E | Inventory and crafting |
+| F | Use: open a chest or machine, or use what you're holding |
+| Q | Quick heal with the healing item that best fits your missing health |
 | M | Sound on or off |
 | K | Show or hide key prompts |
 | H | Show or hide the controls |
 
 Key prompts show what to press: beside the crosshair for what the mouse will do (mine, chop, place, open, attack, shoot, eat), and above your character for movement, ladders and crafting stations. Each prompt disappears for good once you've done that action 4 times.
+
+In the inventory, drag items between slots, or click one slot and then another, to move or swap them.
 
 On touch screens, on-screen buttons appear. Tap the **Mine / Build** button to switch what a tap on the world does.
 
@@ -49,8 +53,8 @@ Every item belongs to a category, shown as a coloured corner on inventory slots 
 
 | Category | Examples |
 | --- | --- |
-| Equipment | pickaxes, hatchets, daggers, bows, arrows |
-| Health | Irn Bru (Bru Rush), Wee Berries (+10 health, +15 food), Rat Piece (cooked meat: +25 health, +40 food), Big Plaster (+30 health) |
+| Equipment | pickaxes, hatchets, daggers, Claymore, bows, arrows, Irn Bru Shield, Bagpipes |
+| Health | Haggis Supper (+100 health, +100 food), Irn Bru (Bru Rush), Wee Berries (+10 health, +15 food), Rat Piece (cooked meat: +25 health, +40 food), Big Plaster (+30 health) |
 | Resources | logs, oak logs, sticks, fibre, string, rope, coal, iron, scrap metal, raw meat |
 | Building | dirt, planks, cobblestone, bricks, glass, torches, ladders, workbench, furnace |
 
@@ -72,6 +76,19 @@ Leaves and bushes drop fibre. Each piece of fibre has a 50% chance of coming wit
 - Your **food** bar drains slowly (a full stomach lasts about 20 minutes). At 0 you start starving and lose 2 health every 4 seconds. Raw meat gives +10 food but makes you sick; cook it first.
 - **Irn Bru machines** sit in sealed brick rooms deep underground (25+ blocks down) and glow in the dark. Right click one for 3 cans. A can gives a **Bru Rush**: unlimited stamina and +50 health (max 150) for 60 seconds.
 - At 0 health you wake up back at the start and keep your items.
+
+### Endgame: The Big Haggis Hunt
+
+A Mutant Haggis sleeps in a lair at the very bottom of the world, lit by glowing Glowcaps. To take it on, work through the checklist (shown in your inventory and as your Next goal once the early goals are done):
+
+1. **Build a base**: a Workbench, a Furnace and a Wee Fire close together, with a roof over the fire.
+2. **Forge a Claymore**, the best sword (28 damage): 4 Iron Ingots, 1 Oak Log, 1 Rope.
+3. **Craft The Persuader**, the best bow.
+4. **Craft the Irn Bru Shield** from 6 Irn Bru Empties (left over when you drink a can), 2 Iron Ingots and 1 Rope. It equips automatically while you hold the Claymore and blocks 30% of bites and charges (0.75x the base chance) and 60% of spit (1.5x).
+5. **Carry 3 cans of Irn Bru** for the fight.
+6. **Craft the Bagpipes**: 1 Raw Meat, 3 Sticks, 2 String, 1 Oak Log. A red marker then points to the lair.
+7. **Play the Bagpipes in the lair.** Without the full kit, the Haggis stirs and goes back to sleep.
+8. **Kill the Mutant Haggis** (600 health). It charges, spits lumps of neeps an' tatties, and enrages at half health with faster charges and triple spit. If you pass out, it goes back to sleep and you can try again. Victory earns 5 Haggis Suppers (full health and food).
 
 ### Weather
 

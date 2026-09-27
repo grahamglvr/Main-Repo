@@ -41,7 +41,7 @@
     AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, COBBLE: 4, LOG: 5, LEAVES: 6, PLANK: 7,
     COAL_ORE: 8, IRON_ORE: 9, SAND: 10, BENCH: 11, FURNACE: 12, BRICK: 13,
     GLASS: 14, TORCH: 15, LADDER: 16, BEDROCK: 17, BUSH: 18,
-    OAK_LOG: 19, OAK_LEAVES: 20, CHEST: 21, SCRAP: 22, ASH: 23, CAMPFIRE: 24, VENDING: 25, VENDING_EMPTY: 26,
+    OAK_LOG: 19, OAK_LEAVES: 20, CHEST: 21, SCRAP: 22, ASH: 23, CAMPFIRE: 24, VENDING: 25, VENDING_EMPTY: 26, GLOWCAP: 27,
   };
   // hard: seconds to mine by hand. tier: tool tier needed (any pickaxe or hatchet counts).
   // pref: the tool that mines it at full speed ('pick' or 'axe'); other tools still help a little.
@@ -79,6 +79,8 @@
   // Irn Bru machines sit in old rooms deep underground. Right click for cans; empty ones can be broken for scrap.
   def(B.VENDING, { name: 'Irn Bru Machine', solid: false, hard: 2, tier: 1, pref: 'pick', drop: 'scrap', dropN: 2, light: 7, cost: 1, sky: true });
   def(B.VENDING_EMPTY, { name: 'Empty Irn Bru Machine', solid: false, hard: 2, tier: 1, pref: 'pick', drop: 'scrap', dropN: 2, cost: 1, sky: true });
+  // Glowcaps: eerie cave mushrooms that light the Haggis lair. Not fire, so Peely-Wallies don't mind them.
+  def(B.GLOWCAP, { name: 'Glowcap', solid: false, hard: 0.2, drop: 'fibre', light: 11, cost: 1, sky: true });
   def(B.CAMPFIRE, { name: 'Wee Fire', solid: false, hard: 0.8, pref: 'axe', drop: 'campfire', light: 13, cost: 1, sky: true });
 
   // ---------- Items ----------
@@ -111,6 +113,8 @@
     cooked_meat: { name: 'Rat Piece', heal: 25, food: 40, cat: 'Health' },
     bandage: { name: 'Big Plaster', heal: 30, cat: 'Health' },
     irn_bru: { name: 'Irn Bru', bru: 60, cat: 'Health' },
+    haggis_supper: { name: 'Haggis Supper', heal: 100, food: 100, cat: 'Health' },
+    empty_can: { name: 'Irn Bru Empty', cat: 'Resources' },
     wood_pick: { name: 'Wooden Pickaxe', tool: 'pick', tier: 1, speed: 2.5 },
     stone_pick: { name: 'Stone Pickaxe', tool: 'pick', tier: 2, speed: 4.5 },
     iron_pick: { name: 'Iron Pickaxe', tool: 'pick', tier: 3, speed: 7 },
@@ -120,6 +124,9 @@
     wood_dagger: { name: 'Wooden Dagger', melee: 8 },
     stone_dagger: { name: 'Stone Dagger', melee: 12 },
     iron_dagger: { name: 'Iron Dagger', melee: 18 },
+    claymore: { name: 'Claymore', melee: 28, sword: true },
+    bru_shield: { name: 'Irn Bru Shield', shield: true },
+    bagpipes: { name: 'Bagpipes', pipes: true },
     wood_bow: { name: 'Shortbow', bow: 16, bonus: 0 },
     oak_bow: { name: 'Oak Shortbow', bow: 20, bonus: 4 },
     iron_bow: { name: 'The Persuader', bow: 24, bonus: 8 },
@@ -129,8 +136,8 @@
   };
   for (const id in ITEM) {
     const it = ITEM[id];
-    if (!it.cat) it.cat = it.tool || it.melee || it.bow || it.arrow ? 'Equipment' : 'Building';
-    if (it.tool || it.melee || it.bow) it.stack = 1;
+    if (!it.cat) it.cat = it.tool || it.melee || it.bow || it.arrow || it.shield || it.pipes ? 'Equipment' : 'Building';
+    if (it.tool || it.melee || it.bow || it.shield || it.pipes) it.stack = 1;
   }
   const ARROWS = ['iron_arrow', 'stone_arrow', 'wood_arrow']; // best first
   const tierName = t => ['your hands', 'a wooden tool', 'a stone tool', 'an iron tool'][t] || 'something stronger';
@@ -138,7 +145,10 @@
   function describe(id) {
     const it = ITEM[id];
     if (it.tool) return `Tier ${it.tier} · fastest on ${it.tool === 'axe' ? 'wood' : 'stone and ore'}`;
+    if (it.sword) return `Melee damage ${it.melee} · the Irn Bru Shield equips with it`;
     if (it.melee) return `Melee damage ${it.melee}`;
+    if (it.shield) return 'Equips with the Claymore · blocks 30% of hits and 60% of spit';
+    if (it.pipes) return 'Play them in the Haggis lair at the bottom of the world · right click';
     if (it.bow) return `Shoots arrows${it.bonus ? ` · +${it.bonus} damage` : ''}`;
     if (it.arrow) return `Arrow damage ${it.arrow}`;
     if (it.sick) return `+${it.food} food, but eating it raw hurts ${it.sick} · cook it first`;
@@ -180,6 +190,9 @@
     { out: 'wood_dagger', n: 1, needs: { plank: 2, stick: 1 }, at: 'bench' },
     { out: 'stone_dagger', n: 1, needs: { cobble: 2, stick: 1, string: 1 }, at: 'bench' },
     { out: 'iron_dagger', n: 1, needs: { iron_ingot: 2, stick: 1, rope: 1 }, at: 'bench' },
+    { out: 'claymore', n: 1, needs: { iron_ingot: 4, oak_log: 1, rope: 1 }, at: 'bench' },
+    { out: 'bru_shield', n: 1, needs: { empty_can: 6, iron_ingot: 2, rope: 1 }, at: 'bench' },
+    { out: 'bagpipes', n: 1, needs: { raw_meat: 1, stick: 3, string: 2, oak_log: 1 }, at: 'bench' },
     { out: 'wood_bow', n: 1, needs: { stick: 3, rope: 1, string: 2 }, at: 'bench' },
     { out: 'oak_bow', n: 1, needs: { oak_log: 2, rope: 1, string: 2 }, at: 'bench' },
     { out: 'iron_bow', n: 1, needs: { iron_ingot: 2, oak_log: 1, rope: 1, string: 2 }, at: 'bench' },
@@ -361,6 +374,12 @@
           p.px(2, 14, '#16171a', 12, 1);                           // can tray
           break;
         }
+        case B.GLOWCAP:
+          p.px(7, 9, '#cfe3d0', 2, 7); p.px(6, 14, '#a8c0aa', 4, 2);                 // stalk
+          p.px(3, 6, '#3fd6c4', 10, 3); p.px(4, 5, '#3fd6c4', 8, 1); p.px(5, 4, '#8ff0e4', 6, 1); // cap
+          p.px(5, 7, '#c8fff6', 1, 1); p.px(9, 6, '#c8fff6', 1, 1);
+          p.px(1, 11, '#3fd6c4', 3, 2); p.px(2, 13, '#cfe3d0', 1, 3);               // wee one beside it
+          break;
         case B.ASH: p.fill('#4a4744'); p.speckle(['#5d5955', '#383634', '#6a6560'], 0.45); break;
         case B.BUSH:
           p.px(2, 7, '#5a7a30', 12, 9); p.px(4, 5, '#5a7a30', 8, 2); p.px(1, 10, '#5a7a30', 14, 6);
@@ -560,6 +579,30 @@
             p.px(11, 3, it.tip, 3, 3); p.px(13, 2, it.tip);
             p.px(2, 11, '#e8e2c8', 2, 2); p.px(4, 13, '#e8e2c8', 2, 2);
             break;
+          case 'claymore':
+            p.line(6, 10, 14, 2, '#eef0f3', 2); p.line(7, 11, 14, 4, '#a9acb3');   // long blade
+            p.px(3, 8, '#c9a045', 7, 2); p.px(4, 7, '#c9a045', 2, 1); p.px(8, 10, '#c9a045', 2, 1); // basket hilt
+            p.line(1, 14, 4, 11, '#5e3d25', 2); p.px(0, 15, '#c9a045', 2, 1);
+            break;
+          case 'bru_shield':
+            p.px(3, 2, '#e0772a', 10, 12); p.px(2, 4, '#e0772a', 12, 8); p.px(4, 14, '#e0772a', 8, 1);
+            p.px(2, 7, '#1f5fae', 12, 3); p.px(4, 8, '#f4efe6', 8, 1);
+            p.px(3, 2, '#f39a4e', 10, 1); p.px(7, 4, '#8b8d93', 2, 2); p.px(7, 11, '#8b8d93', 2, 2);
+            break;
+          case 'bagpipes':
+            p.px(3, 7, '#3f5f3a', 8, 6); p.px(4, 6, '#3f5f3a', 6, 8); p.px(5, 8, '#b3263a', 4, 1); p.px(5, 10, '#b3263a', 4, 1); // tartan bag
+            p.px(6, 7, '#1f5fae', 1, 6); p.px(8, 7, '#1f5fae', 1, 6);
+            p.line(9, 6, 13, 1, '#3b2a1e', 1); p.line(10, 7, 15, 3, '#3b2a1e', 1); p.line(7, 5, 9, 0, '#3b2a1e', 1); // drones
+            p.px(2, 12, '#3b2a1e', 1, 4);                                               // chanter
+            break;
+          case 'empty_can':
+            p.px(5, 4, '#8b8d93', 6, 10); p.px(5, 4, '#b4babf', 2, 10); p.px(5, 7, '#6e5a4a', 6, 3); p.px(8, 9, '#4a4c52', 2, 2);
+            break;
+          case 'haggis_supper':
+            p.px(2, 9, '#f4efe6', 12, 5); p.px(3, 8, '#e8e2c8', 10, 1);                // paper
+            p.px(4, 5, '#6b3a24', 8, 5); p.px(5, 4, '#6b3a24', 6, 1); p.px(5, 6, '#8a4a24', 3, 2); // haggis
+            p.px(10, 7, '#e8c547', 3, 3); p.px(3, 7, '#e8c547', 2, 3);                  // chips
+            break;
           case 'irn_bru':
             p.px(5, 2, '#b4babf', 6, 1);                             // lid
             p.px(4, 3, '#e0772a', 8, 11); p.px(4, 3, '#f39a4e', 2, 11); p.px(10, 3, '#b85a1c', 2, 11);
@@ -735,6 +778,7 @@
       machines.push(x);
     }
     worldInfo.machines = machines.length;
+    lair = makeLair(rnd);
     scanChests();
   }
 
@@ -911,10 +955,15 @@
     ['iron_pick', 'Make Rope from String, then craft an Iron Pickaxe.'],
     ['irn_bru', 'Dig deep underground and find an Irn Bru machine. They glow in the dark. Right click one for cans.'],
   ];
-  function markProgress() { for (const [id] of GOALS) if (ITEM[id] && count(id) > 0) progress[id] = true; }
+  function markProgress() {
+    for (const [id] of GOALS) if (ITEM[id] && count(id) > 0) progress[id] = true;
+    for (const g of ENDGAME) if (ITEM[g.id] && count(g.id) > 0) progress[g.id] = true;
+  }
   function currentGoal() {
     for (const [id, text] of GOALS) if (!progress[id]) return text;
-    return 'You are well equipped. Build a shelter with bricks, glass and torches.';
+    const next = ENDGAME.find(g => !endgameDone(g));
+    if (next) return next.text;
+    return "The Mutant Haggis is deid. Ye're the king o' the wasteland. Build whatever ye like.";
   }
 
   // ---------- Sound ----------
@@ -1040,6 +1089,13 @@
       radio: () => play(() => { noise({ type: 'bandpass', freq: 2400, q: 0.7, dur: 0.18, gain: 0.12 }); tone({ freq: 1200, dur: 0.05, type: 'square', gain: 0.02, delay: 0.2 }); }),
       vend: () => play(() => { tone({ freq: 140, to: 90, dur: 0.12, type: 'square', gain: 0.1 }); noise({ type: 'lowpass', freq: 500, dur: 0.1, gain: 0.4, delay: 0.15 }); tone({ freq: 90, dur: 0.1, type: 'triangle', gain: 0.3, delay: 0.3 }); }),
       fizz: () => play(() => { noise({ type: 'highpass', freq: 3500, dur: 0.5, gain: 0.25 }); tone({ freq: 700, to: 1100, dur: 0.12, gain: 0.08, delay: 0.05 }); }),
+      clang: () => play(v => { tone({ freq: 1400 * v, to: 900, dur: 0.12, type: 'square', gain: 0.08 }); noise({ type: 'highpass', freq: 3000, dur: 0.08, gain: 0.3 }); }),
+      roar: () => play(() => { tone({ freq: 90, to: 50, dur: 0.9, type: 'sawtooth', gain: 0.25 }); noise({ type: 'lowpass', freq: 400, dur: 0.8, gain: 0.5 }); }),
+      spit: () => play(v => { noise({ type: 'bandpass', freq: 700 * v, q: 2, dur: 0.12, gain: 0.35 }); }),
+      pipes: () => play(() => {
+        tone({ freq: 116.5, dur: 2.2, type: 'sawtooth', gain: 0.07 }); tone({ freq: 233, dur: 2.2, type: 'sawtooth', gain: 0.05 }); // drones
+        [466, 523, 587, 698, 587, 523, 466, 440].forEach((f, i) => tone({ freq: f, dur: 0.24, type: 'sawtooth', gain: 0.06, delay: 0.2 + i * 0.22 }));
+      }),
       denied: () => play(() => tone({ freq: 160, to: 120, dur: 0.14, type: 'square', gain: 0.05 })),
       click: () => play(() => tone({ freq: 900, dur: 0.03, type: 'square', gain: 0.03 })),
     };
@@ -1049,7 +1105,7 @@
     [B.STONE]: 'stone', [B.COBBLE]: 'stone', [B.COAL_ORE]: 'stone', [B.IRON_ORE]: 'stone',
     [B.FURNACE]: 'stone', [B.BRICK]: 'stone', [B.BEDROCK]: 'stone',
     [B.LEAVES]: 'leaf', [B.BUSH]: 'leaf', [B.OAK_LEAVES]: 'leaf', [B.GLASS]: 'glass',
-    [B.OAK_LOG]: 'wood', [B.CHEST]: 'wood', [B.SCRAP]: 'stone', [B.CAMPFIRE]: 'wood',
+    [B.GLOWCAP]: 'leaf', [B.OAK_LOG]: 'wood', [B.CHEST]: 'wood', [B.SCRAP]: 'stone', [B.CAMPFIRE]: 'wood',
   };
   const materialOf = b => MATERIAL[b] || 'dirt';
   window.addEventListener('pointerdown', () => sfx.unlock(), true);
@@ -1077,6 +1133,8 @@
     const k = e.key.toLowerCase();
     if (k === 'e') { if (invEl.hidden) didAction('inventory'); toggleInv(); e.preventDefault(); return; }
     if (k === 'k') { togglePrompts(); return; }
+    if (k === 'f') { interact(); return; }
+    if (k === 'q') { quickHeal(); return; }
     if (k === 'escape') { if (invOpen()) toggleInv(false); helpEl.hidden = true; return; }
     if (k === 'h') { helpEl.hidden = !helpEl.hidden; return; }
     if (k === 'm') { toggleSound(); return; }
@@ -1290,6 +1348,7 @@
     if (player.hp === 0) {
       spawn();
       bruT = 0;
+      if (boss) { resetBoss(); toast('The Mutant Haggis went back to sleep. Play the Bagpipes in its lair to try again.', 5000); }
       player.hp = MAX_HP;
       player.st = MAX_ST;
       player.food = Math.max(player.food, 60);
@@ -1329,6 +1388,12 @@
     craftTool: ['Look at that. Pure craftsmanship.', "Ah'm basically an engineer noo."],
     vending: ['A Bru machine! Ya dancer!', "Is that… is that whit ah think it is?", 'Hallelujah!'],
     bru: ['Mad fur it!', 'Pure rocket fuel, this.', 'Ah can see through time!'],
+    haggis: ["Whit in the name o'… that's a HAGGIS?!", "Ah'm no eatin' that wan."],
+    haggisRage: ["It's ragin' noo!", "Ah think ah've annoyed it."],
+    victory: ["Haggis, neeps an' tatties fur a year!", 'Ya dancer! Get it up ye!'],
+    pipesNothing: ["Naebody's comin'. Rude."],
+    notReady: ["Ah'm no ready fur that yet.", 'Need the full kit first, big man.'],
+    base: ['Hame sweet hame.', 'Pure dead cosy, this.'],
     bruEnd: ["Aw, the Bru's worn aff.", 'Need another can. Or ten.'],
   };
   const RADIO = {
@@ -1336,6 +1401,8 @@
     ashWarn: ["Big man, see that ash comin'? Get under a roof or get doon a hole!", "Ash cloud headin' your way. Ah'm stayin' in, you're on yer own, pal."],
     rainWarn: ["Heavy dreich on the way. Get yer fires under cover or they're goin' oot.", "Rain's comin'. The bushes'll love it. You'll no."],
     heatWarn: ["Heatwave comin'. Taps aff, big man. Keep yer scran handy, ye'll be starvin'.", 'Scorcher on the way. Stay in the shade.'],
+    haggis: ["TAM! Whit's that noise?! Is that… bagpipes? Ye've woken it, ya numpty!"],
+    victory: ["Tam, ye absolute legend! The haggis is deid! Drinks are on me. Well, the Bru's on me."],
     clear: ["That's it passed. Oot ye go.", "Weather's cleared. Gaun yersel', big man."],
   };
   const pick = list => list[Math.floor(Math.random() * list.length)];
@@ -1366,7 +1433,7 @@
     const helps = f.bru || (f.heal && player.hp < maxHp()) || (f.food && player.food < MAX_FOOD);
     if (!helps) { toast(f.food ? "You're not hungry and your health is full" : 'Your health is already full'); return; }
     removeItem(it.id, 1);
-    if (f.bru) { sfx.fizz(); drinkBru(f.bru); toast(`Bru Rush! Unlimited stamina and +${BRU_HP} health for ${f.bru} seconds.`); return; }
+    if (f.bru) { sfx.fizz(); drinkBru(f.bru); addItem('empty_can', 1); toast(`Bru Rush! Unlimited stamina and +${BRU_HP} health for ${f.bru} seconds.`); return; }
     sfx.eat();
     didAction('eat');
     const parts = [];
@@ -1504,6 +1571,219 @@
     }
   }
 
+  // ---------- Irn Bru Shield ----------
+  // Equips automatically while the Claymore is held. Blocks 0.75x the base chance against
+  // bites and charges, and 1.5x against spit.
+  const SHIELD_BASE = 0.4, SHIELD_MELEE = SHIELD_BASE * 0.75, SHIELD_SPIT = SHIELD_BASE * 1.5;
+  const shieldUp = () => !!(held() && ITEM[held().id].sword && count('bru_shield') > 0);
+  function tryBlock(kind) {
+    if (!shieldUp() || Math.random() >= (kind === 'spit' ? SHIELD_SPIT : SHIELD_MELEE)) return false;
+    const [px] = centre(player);
+    floaters.push({ x: px, y: player.y - 0.2, text: 'Blocked!', col: '#6fb3de', t: 0.9 });
+    sfx.clang();
+    return true;
+  }
+
+  // ---------- The Haggis lair ----------
+  // A big cavern near the bottom of the world. Play the Bagpipes inside it, with the full kit, to summon the beast.
+  let lair = null;
+  function makeLair(rnd) {
+    let cx = W / 2;
+    for (let i = 0; i < 50 && Math.abs(cx - W / 2) < 40; i++) cx = 20 + Math.floor(rnd() * (W - 40));
+    const floor = H - 4, rx = 13, top = floor - 9;
+    for (let dx = -rx; dx <= rx; dx++) for (let y = top; y < floor; y++) {
+      const ny = (y - (floor - 4.5)) / 4.8;
+      if ((dx / rx) ** 2 + ny * ny <= 1) tiles[idx(cx + dx, y)] = B.AIR;
+    }
+    for (let dx = -rx - 1; dx <= rx + 1; dx++) {
+      tiles[idx(cx + dx, floor)] = B.STONE;
+      if (tiles[idx(cx + dx, floor - 1)] !== B.AIR) continue;
+      const r = rnd();
+      if (r < 0.2) tiles[idx(cx + dx, floor - 1)] = B.GLOWCAP; // glowing mushrooms light the lair
+      else if (r < 0.45) tiles[idx(cx + dx, floor - 1)] = B.ASH;
+    }
+    return { x: cx, x0: cx - rx, x1: cx + rx, y0: top, y1: floor };
+  }
+  const inLair = () => {
+    if (!lair) return false;
+    const [px, py] = centre(player);
+    return px >= lair.x0 - 1 && px <= lair.x1 + 1 && py >= lair.y0 - 1 && py <= lair.y1 + 1;
+  };
+
+  // ---------- Endgame ----------
+  // The Big Haggis Hunt: build a base, gear up, then pipe the Mutant Haggis out of its lair and kill it.
+  const ENDGAME = [
+    { id: 'base', text: 'Build a base: a Workbench, a Furnace and a Wee Fire close together, with a roof over the fire.' },
+    { id: 'claymore', text: 'Forge a Claymore, the best sword: 4 Iron Ingots, 1 Oak Log, 1 Rope.' },
+    { id: 'iron_bow', text: 'Craft The Persuader, the best bow.' },
+    { id: 'bru_shield', text: 'Drink Irn Bru and craft the Irn Bru Shield from 6 empties, 2 Iron Ingots and 1 Rope.' },
+    { id: 'bru3', text: 'Carry 3 cans of Irn Bru for the fight.', live: () => count('irn_bru') >= 3 },
+    { id: 'bagpipes', text: 'Craft the Bagpipes: 1 Raw Meat, 3 Sticks, 2 String, 1 Oak Log.' },
+    { id: 'summoned', text: 'Go to the Haggis lair at the very bottom of the world and play the Bagpipes.' },
+    { id: 'haggis', text: 'Kill the Mutant Haggis!' },
+  ];
+  const endgameDone = g => g.live ? g.live() : !!progress[g.id];
+  function kitMissing() {
+    const miss = [];
+    if (!progress.base) miss.push('a base');
+    if (!count('claymore')) miss.push('the Claymore');
+    if (!count('iron_bow')) miss.push('The Persuader');
+    if (!count('bru_shield')) miss.push('the Irn Bru Shield');
+    if (count('irn_bru') < 3) miss.push(`${3 - count('irn_bru')} more Irn Bru`);
+    return miss;
+  }
+  let baseT = 0;
+  function checkBase(dt) {
+    if (progress.base || (baseT -= dt) > 0) return;
+    baseT = 2;
+    const px = Math.floor(player.x), py = Math.floor(player.y);
+    for (let y = py - 20; y <= py + 20; y++) for (let x = px - 20; x <= px + 20; x++) {
+      if (get(x, y) !== B.CAMPFIRE || openToSky(x, y)) continue;
+      let bench = false, furnace = false;
+      for (let yy = y - 6; yy <= y + 6; yy++) for (let xx = x - 6; xx <= x + 6; xx++) {
+        const b = get(xx, yy);
+        if (b === B.BENCH) bench = true;
+        if (b === B.FURNACE) furnace = true;
+      }
+      if (bench && furnace) {
+        progress.base = true;
+        uiDirty = true;
+        say('base', { force: true });
+        toast('Base built! Now gear up for the Big Haggis Hunt.', 4000);
+        return;
+      }
+    }
+  }
+
+  // ---------- Bagpipes, summoning and the boss ----------
+  let boss = null;
+  function playPipes() {
+    sfx.pipes();
+    if (boss) { toast("It's already here! Fight!"); return; }
+    if (!inLair()) {
+      say('pipesNothing', { force: true });
+      toast('The pipes echo round the wasteland. Nothing answers. Play them in the Haggis lair at the very bottom of the world.', 5000);
+      return;
+    }
+    const miss = kitMissing();
+    if (miss.length) {
+      say('notReady', { force: true });
+      toast(`Something stirs, then settles. You're not ready. Still need: ${miss.join(', ')}.`, 6000);
+      return;
+    }
+    summonHaggis();
+  }
+  function summonHaggis() {
+    const d = ENEMY.haggis, [px] = centre(player);
+    const x = px < lair.x ? lair.x1 - 4 : lair.x0 + 2;
+    boss = { type: 'haggis', x, y: lair.y1 - d.h - 0.05, w: d.w, h: d.h, vx: 0, vy: 0, kb: 0, hp: d.hp, max: d.hp,
+      face: px < x ? -1 : 1, flash: 0, onGround: false, spitT: 2.5, chargeT: 4, charging: 0, chargeDir: 1, enraged: false };
+    enemies.push(boss);
+    progress.summoned = true;
+    uiDirty = true;
+    sfx.roar();
+    say('haggis', { force: true });
+    setTimeout(() => radio('haggis'), 1500);
+    bossBarEl.hidden = false;
+  }
+  function updateBoss(e, dt) {
+    const d = ENEMY.haggis, [ecx] = centre(e), [pcx] = centre(player), dx = pcx - ecx;
+    if (!e.enraged && e.hp < e.max / 2) {
+      e.enraged = true;
+      sfx.roar();
+      say('haggisRage', { force: true });
+      floaters.push({ x: ecx, y: e.y - 0.3, text: 'ENRAGED', col: '#e2566b', t: 1.5 });
+    }
+    let speed = d.speed * (e.enraged ? 1.4 : 1), dir = Math.abs(dx) > 1.5 ? Math.sign(dx) : 0;
+    e.chargeT -= dt;
+    if (e.charging > 0) { e.charging -= dt; speed = 9; dir = e.chargeDir; }
+    else if (e.chargeT <= 0 && Math.abs(dx) < 14) { e.charging = 0.7; e.chargeDir = Math.sign(dx) || 1; e.chargeT = e.enraged ? 3.5 : 5.5; sfx.roar(); }
+    if (dir) e.face = dir;
+    e.kb -= e.kb * Math.min(1, dt * 6);
+    e.vx = dir * speed + e.kb;
+    stepBody(e, dt);
+    if (e.blocked && e.onGround) e.vy = d.jump;
+    e.flash = Math.max(0, e.flash - dt);
+    // Spit volleys: one lump, or three when enraged
+    if ((e.spitT -= dt) <= 0) {
+      e.spitT = e.enraged ? 1.6 : 2.6;
+      const n = e.enraged ? 3 : 1, ox = ecx + e.face * 1.1, oy = e.y + 0.6;
+      const [tx, ty] = centre(player), ang = Math.atan2(ty - oy, tx - ox) - 0.08;
+      for (let i = 0; i < n; i++) {
+        const a = ang + (i - (n - 1) / 2) * 0.12;
+        spits.push({ x: ox, y: oy, vx: Math.cos(a) * 13, vy: Math.sin(a) * 13, life: 3 });
+      }
+      sfx.spit();
+    }
+    if (iframes <= 0 && overlaps(e, player)) {
+      iframes = 1;
+      player.kb = Math.sign(dx || 1) * 12;
+      player.vy = -7;
+      if (!tryBlock('melee')) hurt(e.charging > 0 ? 28 : d.dmg);
+    }
+  }
+  let spits = [];
+  function updateSpits(dt) {
+    for (const p of spits) {
+      p.vy += GRAVITY * 0.35 * dt;
+      p.life -= dt;
+      const steps = Math.ceil(Math.hypot(p.vx, p.vy) * dt / 0.25) || 1;
+      for (let i = 0; i < steps && !p.dead; i++) {
+        p.x += p.vx * dt / steps; p.y += p.vy * dt / steps;
+        if (solidAt(Math.floor(p.x), Math.floor(p.y))) { p.dead = true; break; }
+        if (p.x > player.x && p.x < player.x + player.w && p.y > player.y && p.y < player.y + player.h) {
+          p.dead = true;
+          if (!tryBlock('spit')) hurt(12);
+        }
+      }
+      if (p.life <= 0) p.dead = true;
+    }
+    spits = spits.filter(p => !p.dead);
+  }
+  function bossDefeated() {
+    boss = null;
+    progress.haggis = true;
+    uiDirty = true;
+    bossBarEl.hidden = true;
+    spits = [];
+    say('victory', { force: true });
+    setTimeout(() => radio('victory'), 1200);
+    setTimeout(() => { document.getElementById('victory').hidden = false; }, 2500);
+  }
+  function resetBoss() {
+    boss = null;
+    spits = [];
+    progress.summoned = false;
+    bossBarEl.hidden = true;
+  }
+
+  // ---------- F: use / interact, Q: quick heal ----------
+  function useHeld() {
+    const it = held() && ITEM[held().id];
+    if (!it) return false;
+    if (it.pipes) { playPipes(); return true; }
+    if (it.heal || it.food || it.bru) { eat(held()); return true; }
+    return false;
+  }
+  function interact() {
+    if (invOpen()) return;
+    const t = targetTile();
+    if (t.visible && get(t.tx, t.ty) === B.CHEST) return openChest(t.tx, t.ty);
+    if (t.visible && get(t.tx, t.ty) === B.VENDING) return openVending(t.tx, t.ty);
+    if (!useHeld()) toast('Nothing to use here. Point at a chest or machine, or hold food, a Big Plaster, Irn Bru or the Bagpipes.');
+  }
+  // Uses the healing item that best fits the missing health (Irn Bru is saved for emergencies).
+  function quickHeal() {
+    if (player.hp >= maxHp()) { toast('Your health is already full'); return; }
+    const missing = maxHp() - player.hp;
+    const options = inv.filter(Boolean).map(it => it.id).filter((id, i, a) => a.indexOf(id) === i && ITEM[id].heal && !ITEM[id].sick);
+    if (!options.length) { toast('No healing items. Find berries, cook a Rat Piece or craft a Big Plaster.'); sfx.denied(); return; }
+    options.sort((a, b) => ITEM[a].heal - ITEM[b].heal);
+    const pickId = options.find(id => ITEM[id].heal >= missing) || options[options.length - 1];
+    didAction('quickheal');
+    eat({ id: pickId });
+  }
+
   // ---------- Enemies and combat ----------
   const ENEMY = {
     rat: { name: 'Big Minger', w: 0.9, h: 0.6, hp: 20, dmg: 6, speed: 2.7, jump: -9, drops: [['raw_meat', 1, 0.7]] },
@@ -1513,6 +1793,8 @@
     crawler: { name: 'Peely-Wally', w: 0.8, h: 1.2, hp: 35, dmg: 10, speed: 3.0, jump: -12, fearsFire: true,
       drops: [['raw_meat', 1, 0.4], ['string', 1, 0.4], ['rope', 1, 0.2]] },
   };
+  ENEMY.haggis = { name: 'Mutant Haggis', w: 2.6, h: 1.9, hp: 600, dmg: 20, speed: 2.2, jump: -12, boss: true,
+    drops: [['haggis_supper', 5, 1]] };
   const FIRE_RANGE = 7;
   const FIRE_BLOCKS = new Set([B.TORCH, B.CAMPFIRE, B.FURNACE]);
   // X position of the nearest fire within range (a placed fire, or a torch in the player's hand), or null.
@@ -1535,6 +1817,12 @@
   let enemies = [], arrows = [], floaters = [];
   let spawnTimer = 30, attackCooldown = 0, iframes = 0;
 
+  // Distance from Tam's centre to the nearest point of a creature, plus a little so small ones feel the same as before.
+  function reachOf(e) {
+    const [px, py] = centre(player);
+    const nx = Math.max(e.x, Math.min(px, e.x + e.w)), ny = Math.max(e.y, Math.min(py, e.y + e.h));
+    return Math.hypot(px - nx, py - ny) + 0.6;
+  }
   const mouseWorld = () => ({ x: (mouse.x + camera.x) / TILE, y: (mouse.y + camera.y) / TILE });
   const centre = e => [e.x + e.w / 2, e.y + e.h / 2];
   const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -1559,7 +1847,7 @@
   }
 
   function trySpawn() {
-    if (enemies.length >= MAX_ENEMIES) return;
+    if (boss || enemies.length >= MAX_ENEMIES) return;
     const side = Math.random() < 0.5 ? -1 : 1;
     const x = Math.floor(player.x + side * (18 + Math.random() * 16));
     if (x < 1 || x >= W - 1) return;
@@ -1590,6 +1878,7 @@
   const MAX_CRAWLERS = 3, BRIGHT = 9;
   let crawlerT = 12;
   function trySpawnCrawler() {
+    if (boss) return;
     if (enemies.filter(e => e.type === 'crawler').length >= MAX_CRAWLERS || enemies.length >= MAX_ENEMIES + 2) return;
     for (let attempt = 0; attempt < 8; attempt++) {
       const side = Math.random() < 0.5 ? -1 : 1;
@@ -1618,6 +1907,7 @@
     if ((crawlerT -= dt) <= 0) { crawlerT = 6 + Math.random() * 4; trySpawnCrawler(); }
     const [pcx, pcy] = centre(player);
     for (const e of enemies) {
+      if (e.type === 'haggis') { updateBoss(e, dt); continue; }
       const d = ENEMY[e.type];
       const [ecx, ecy] = centre(e);
       const dx = pcx - ecx, dy = pcy - ecy;
@@ -1673,7 +1963,7 @@
         iframes = 0.8;
         player.kb = Math.sign(dx || 1) * 9;
         player.vy = -5;
-        hurt(d.dmg);
+        if (!tryBlock('melee')) hurt(d.dmg);
       }
       if (prey && overlaps(e, prey)) {
         e.biteT = (e.biteT || 0) - dt;
@@ -1698,12 +1988,14 @@
     const [ecx, ecy] = centre(e);
     e.hp -= n;
     e.flash = 0.15;
-    e.kb = Math.sign(ecx - fromX || 1) * 8;
-    e.vy = -4;
+    const heavy = ENEMY[e.type].boss;
+    e.kb = Math.sign(ecx - fromX || 1) * (heavy ? 2 : 8);
+    if (!heavy) e.vy = -4;
     floaters.push({ x: ecx, y: e.y, text: `-${n}`, col: '#ffd166', t: 0.9 });
     sfx.hitEnemy();
+    if (e.hp <= 0 && ENEMY[e.type].boss) setTimeout(bossDefeated, 0);
     if (e.hp <= 0) {
-      say('kill', { chance: 0.4, cooldown: 8 });
+      if (!ENEMY[e.type].boss) say('kill', { chance: 0.4, cooldown: 8 });
       e.dead = true;
       sfx.enemyDie();
       progress.kill = true;
@@ -1792,6 +2084,7 @@
     }
     arrows = arrows.filter(a => !a.dead);
     enemies = enemies.filter(e => !e.dead);
+    updateSpits(dt);
     for (const f of floaters) { f.t -= dt; f.y -= dt * 0.8; }
     floaters = floaters.filter(f => f.t > 0);
   }
@@ -1862,7 +2155,7 @@
       fighting = true;
       mining.t = 0;
       if (attackCooldown <= 0) fireBow(heldItem);
-    } else if (foe && Math.hypot(centre(foe)[0] - centre(player)[0], centre(foe)[1] - centre(player)[1]) <= MELEE_REACH) {
+    } else if (foe && reachOf(foe) <= MELEE_REACH) {
       fighting = true;
       mining.t = 0;
       if (attackCooldown <= 0) melee(foe);
@@ -1895,7 +2188,7 @@
       }
     } else mining.t = 0;
 
-    const food = held() && (ITEM[held().id].heal || ITEM[held().id].food || ITEM[held().id].bru);
+    const food = held() && (ITEM[held().id].heal || ITEM[held().id].food || ITEM[held().id].bru || ITEM[held().id].pipes);
     if (mouse.right && !invOpen() && t.visible && get(t.tx, t.ty) === B.CHEST && placeCooldown <= 0) {
       placeCooldown = 0.4;
       openChest(t.tx, t.ty);
@@ -1903,8 +2196,8 @@
       placeCooldown = 0.4;
       openVending(t.tx, t.ty);
     } else if (mouse.right && !invOpen() && food && placeCooldown <= 0) {
-      placeCooldown = 0.4;
-      eat(held());
+      placeCooldown = ITEM[held().id].pipes ? 1.5 : 0.4;
+      useHeld();
     } else if (mouse.right && !invOpen() && t.inReach && placeCooldown <= 0) {
       placeCooldown = 0.2;
       const it = held();
@@ -1926,6 +2219,7 @@
     speech.t -= dt;
     sayGap -= dt;
     updateWeather(dt);
+    checkBase(dt);
     updateEnemies(dt);
     updateArrows(dt);
     updateAsh(dt);
@@ -1938,7 +2232,8 @@
     camera.x += (tx - camera.x) * k;
     camera.y += (ty - camera.y) * k;
     camera.x = Math.max(0, Math.min(W * TILE - viewW, camera.x));
-    camera.y = Math.max(-TILE * 8, Math.min(H * TILE - viewH, camera.y));
+    // The camera can dip below the bottom of the world so fights in the Haggis lair aren't hidden under the HUD.
+    camera.y = Math.max(-TILE * 8, Math.min(H * TILE - viewH * 0.6, camera.y));
   }
   function boxOverlapsTile(tx, ty) {
     return player.x < tx + 1 && player.x + player.w > tx && player.y < ty + 1 && player.y + player.h > ty;
@@ -2004,10 +2299,17 @@
       const d = Math.hypot(x + 0.5 - px, y + 0.5 - py);
       if (d < bd) { bd = d; best = [x, y]; }
     }
-    if (!best) return;
-    const tx = (best[0] + 0.5) * TILE - cx, ty = (best[1] + 0.5) * TILE - cy;
+    if (best) drawMarker(best[0] + 0.5, best[1] + 0.5, 'chest', bd, '#e8b83a', cx, cy);
+    // Once Tam has the Bagpipes, a red marker points the way to the Haggis lair.
+    if (lair && count('bagpipes') && !progress.haggis && !boss) {
+      const lx = lair.x + 0.5, ly = lair.y1 - 2;
+      drawMarker(lx, ly, 'Haggis lair', Math.hypot(lx - px, ly - py), '#e2566b', cx, cy);
+    }
+  }
+  function drawMarker(wx, wy, label, dist, colour, cx, cy) {
+    const tx = wx * TILE - cx, ty = wy * TILE - cy, bd = dist;
     const bob = Math.sin(performance.now() / 250) * 3;
-    ctx.fillStyle = '#e8b83a';
+    ctx.fillStyle = colour;
     ctx.strokeStyle = 'rgba(20,16,8,0.8)';
     ctx.lineWidth = 2;
     const m = 36;
@@ -2031,8 +2333,8 @@
     ctx.font = '600 13px "Chakra Petch", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.lineWidth = 3;
-    ctx.strokeText(`chest ${Math.round(bd)}m`, ex, ey + 24);
-    ctx.fillText(`chest ${Math.round(bd)}m`, ex, ey + 24);
+    ctx.strokeText(`${label} ${Math.round(bd)}m`, ex, ey + 24);
+    ctx.fillText(`${label} ${Math.round(bd)}m`, ex, ey + 24);
   }
 
   const Q = TILE / 2;
@@ -2073,8 +2375,18 @@
       }
       if (b) drawTile(b, x, y, sx, sy);
     }
+    if (H * TILE - cy < viewH) { // below the bottom of the world: solid bedrock black
+      ctx.fillStyle = '#0c0b0a';
+      ctx.fillRect(0, H * TILE - cy, viewW, viewH);
+    }
 
     for (const e of enemies) drawEnemy(e, cx, cy);
+    for (const p of spits) { // neeps an' tatties, spat hard
+      const x = p.x * TILE - cx, y = p.y * TILE - cy;
+      ctx.fillStyle = 'rgba(14,11,9,0.9)'; ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e0a040'; ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f4dca0'; ctx.fillRect(x - 2, y - 3, 2, 2);
+    }
     drawPlayer(cx, cy);
     for (const a of arrows) {
       const sp = Math.hypot(a.vx, a.vy), ux = a.vx / sp, uy = a.vy / sp;
@@ -2185,6 +2497,15 @@
     ctx.globalCompositeOperation = 'lighter';
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
       const b = tiles[idx(x, y)];
+      if (b === B.GLOWCAP) {
+        const gx = (x + 0.5) * TILE - cx, gy = (y + 0.6) * TILE - cy, r = 2.4 * TILE;
+        const glow = ctx.createRadialGradient(gx, gy, 2, gx, gy, r);
+        glow.addColorStop(0, 'rgba(63,214,196,0.28)');
+        glow.addColorStop(1, 'rgba(63,214,196,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(gx - r, gy - r, r * 2, r * 2);
+        continue;
+      }
       if (b === B.VENDING) { // a full Irn Bru machine glows so it stands out in the dark
         const gx = (x + 0.5) * TILE - cx, gy = (y + 0.5) * TILE - cy, r = 2.6 * TILE;
         const glow = ctx.createRadialGradient(gx, gy, 2, gx, gy, r);
@@ -2301,8 +2622,10 @@
     }
   }
   function drawAsh() {
-    const L = light[idx(Math.floor(player.x + player.w / 2), Math.max(0, Math.floor(player.y)))] / 15;
-    if (L <= 0.2) return; // none in caves
+    const col = Math.max(0, Math.min(W - 1, Math.floor(player.x + player.w / 2)));
+    if (player.y > surface[col] + 3) return; // none underground, even in lit caves
+    const L = light[idx(col, Math.max(0, Math.floor(player.y)))] / 15;
+    if (L <= 0.2) return;
     for (const a of ash) {
       ctx.fillStyle = `rgba(225,215,200,${(0.25 + a.s * 0.35) * L})`;
       const size = a.s > 0.7 ? 3 : 2;
@@ -2376,9 +2699,10 @@
     drawSprite(x + w / 2, y, e.face, e.flash, g => {
       if (e.type === 'rat') paintRat(g, w, h, step, now);
       else if (e.type === 'crawler') paintCrawler(g, w, h, step, now, e);
+      else if (e.type === 'haggis') paintHaggis(g, w, h, step, now, e);
       else paintGhoul(g, w, h, step, now);
     });
-    if (e.hp < e.max) {
+    if (e.hp < e.max && !ENEMY[e.type].boss) {
       ctx.fillStyle = 'rgba(10,8,6,0.8)';
       ctx.fillRect(x + w / 2 - 13, y - 9, 26, 5);
       ctx.fillStyle = '#e2566b';
@@ -2416,6 +2740,33 @@
     R(g, '#ff3b3b', head + 5, 6, 2, 2); R(g, '#ffc0c0', head + 5, 6, 1, 1); // glowing eye
     g.fillStyle = 'rgba(220,210,200,0.6)';             // whiskers
     g.fillRect(head + 10, 9, 5, 1); g.fillRect(head + 9, 11, 5, 1);
+  }
+
+  // The Mutant Haggis: a huge shaggy lump on stubby legs (shorter on one side, as every Scot knows),
+  // three angry eyes, tusks, and a tartan scrap round its neck.
+  function paintHaggis(g, w, h, step, now, e) {
+    const FUR = '#6b4a2e', FUR_DK = '#4e341f', FUR_HI = '#8a6440', SKIN = '#c98f68';
+    const L = -w / 2, breathe = Math.round(Math.sin(now / 300));
+    // legs: back ones shorter
+    R(g, FUR_DK, L + 10 + step, h - 12, 7, 12); R(g, FUR_DK, w / 2 - 22 - step, h - 8, 7, 8);
+    R(g, '#2a1c12', L + 9 + step, h - 2, 9, 2); R(g, '#2a1c12', w / 2 - 23 - step, h - 2, 9, 2);
+    // body: layered shaggy lump
+    R(g, FUR, L + 4, 12 - breathe, w - 8, h - 24 + breathe);
+    R(g, FUR, L + 10, 6 - breathe, w - 22, 8);
+    R(g, FUR, L + 1, 20, w - 2, h - 38);
+    R(g, FUR_HI, L + 12, 8 - breathe, w - 30, 3);
+    for (let i = 0; i < 16; i++) R(g, i % 2 ? FUR_DK : FUR_HI, L + 6 + i * 5, 14 + (i * 7) % (h - 34), 2, 5); // fur strands
+    R(g, FUR_DK, L + 4, h - 14, w - 8, 3);
+    // tartan scarf
+    R(g, '#b3263a', w / 2 - 34, 22, 20, 7);
+    R(g, '#1f5fae', w / 2 - 30, 22, 2, 7); R(g, '#1f5fae', w / 2 - 22, 22, 2, 7); R(g, '#2a6a3a', w / 2 - 34, 25, 20, 1);
+    // face at the front
+    R(g, FUR, w / 2 - 16, 10, 16, 22);
+    R(g, SKIN, w / 2 - 6, 18, 8, 8);                                                    // snout
+    R(g, '#1a1210', w / 2 - 5, 27, 9, 3 + (e.charging > 0 ? 2 : 0));                  // mouth
+    R(g, '#f4efe6', w / 2 - 5, 26, 2, 4); R(g, '#f4efe6', w / 2 + 1, 26, 2, 4);       // tusks
+    const glow = e.enraged ? '#ff3b3b' : '#e8b83a';
+    for (const [ex, ey] of [[-12, 12], [-6, 10], [-9, 16]]) { R(g, '#1a1210', w / 2 + ex - 1, ey - 1, 5, 5); R(g, glow, w / 2 + ex, ey, 3, 3); } // three eyes
   }
 
   function paintGhoul(g, w, h, step, now) {
@@ -2489,6 +2840,7 @@
     const blink = now % 3600 < 130;
     const armRot = -0.3 + (mining.t > 0 ? Math.sin(now / 60) * 0.6 : player.swing > 0 ? -1.2 + player.swing * 8 : 0) - swing * 0.03;
     const tapsAff = heatOn(); // heatwave in the open: overalls rolled down to the waist
+    const shieldOn = shieldUp();
     drawSprite(px + w / 2, py, player.face, 0, g => {
       const SKIN = '#f0c6a0', SKIN_SH = '#d9a57e', SKIN_DK = '#c08a64', SKIN_HI = '#fbe0c6';
       // Bunker-issue work gear: orange bib overalls with grey straps and panels over a grey shirt
@@ -2502,6 +2854,11 @@
       R(g, SKIN_SH, -2, 5, 5, 9); R(g, SKIN_DK, -2, 12, 5, 3);
       if (!tapsAff) R(g, GREY_SH, -2, 0, 5, 5);             // short grey sleeve
       g.restore();
+      if (shieldOn) { // Irn Bru Shield on the far arm, poking out behind Tam
+        R(g, '#e0772a', -15, 18 + bob, 10, 15); R(g, '#b85a1c', -15, 18 + bob, 2, 15);
+        R(g, '#1f5fae', -15, 23 + bob, 10, 4); R(g, '#f4efe6', -13, 24 + bob, 6, 1);
+        R(g, '#f39a4e', -13, 18 + bob, 6, 1); R(g, '#8b8d93', -11, 20 + bob, 2, 2);
+      }
       // legs: back leg darker
       const legs = [[1 - swing * 0.5, true], [-7 + swing * 0.5, false]];
       for (const [lx, back] of legs) {
@@ -2586,6 +2943,8 @@
   let shownSt = -1, shownFood = -1, shownWeather = '';
   const weatherText = document.getElementById('weather-text'), weatherRow = document.getElementById('weather-row');
   const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  const bossBarEl = document.getElementById('bossbar'), bossFill = document.getElementById('boss-fill');
+  document.getElementById('victory-go').addEventListener('click', () => { document.getElementById('victory').hidden = true; });
   const buffRow = document.getElementById('buff-row'), buffText = document.getElementById('buff-text');
   let shownBuff = '';
   function drawBuffChip() {
@@ -2661,6 +3020,9 @@
     'Iron ore is deep doon an\' needs a stone tool or better.',
     'Ruins often hide a supply chest behind the broken walls.',
     'Press E for yer inventory an\' crafting.',
+    "There's a Mutant Haggis sleepin' at the bottom o' the world. Pipe it oot when ye're ready.",
+    'The Irn Bru Shield only goes up when ye hold the Claymore.',
+    "Press Q tae quick heal wi' whatever ye've got. F uses whit ye're holdin' or pointin' at.",
     "Rumour has it there's Irn Bru machines deep underground. Worth the dig.",
     'A can o\' Irn Bru gives ye unlimited stamina an\' 50 extra health for a minute.',
     "Peely-Wallies hide just below where the daylight stops. They'll no come oot intae the light.",
@@ -2698,6 +3060,8 @@
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'slot';
+    el.dataset.slot = i;
+    el.addEventListener('pointerdown', e => startDrag(e, i));
     if (it) {
       el.style.backgroundImage = `url(${ICON_URL[it.id]})`;
       const d = describe(it.id);
@@ -2717,7 +3081,7 @@
     for (let i = 0; i < 9; i++) {
       const el = slotEl(i, true);
       if (i === selected) el.classList.add('sel');
-      el.addEventListener('click', () => { selected = i; uiDirty = true; });
+      el.addEventListener('click', () => { if (!eatClick()) { selected = i; uiDirty = true; } });
       hotbarEl.append(el);
     }
   }
@@ -2728,9 +3092,16 @@
       const el = slotEl(i, false);
       if (i === pickSlot) el.classList.add('pick');
       else if (i === selected) el.classList.add('sel');
-      el.addEventListener('click', () => clickSlot(i));
+      el.addEventListener('click', () => { if (!eatClick()) clickSlot(i); });
       invGridEl.append(el);
     }
+    const hunt = document.getElementById('hunt-list');
+    hunt.replaceChildren(...ENDGAME.map(g => {
+      const li = document.createElement('li');
+      if (endgameDone(g)) li.className = 'done';
+      li.textContent = g.text;
+      return li;
+    }));
     const st = nearStations();
     lastStationKey = Object.keys(st).join();
     stationsEl.textContent = `near: ${['bench', 'furnace', 'campfire'].filter(s => st[s]).map(s => ITEM[s].name).join(', ') || 'nothing'}`;
@@ -2823,22 +3194,63 @@
     }
   }
 
+  // Move the stack in slot `from` onto slot `to`: merge matching stacks, otherwise swap.
+  function moveSlot(from, to) {
+    if (from === to || !inv[from]) return;
+    const a = inv[from], b = inv[to];
+    if (b && a.id === b.id && b.n < stackOf(b.id)) {
+      const k = Math.min(a.n, stackOf(b.id) - b.n);
+      b.n += k; a.n -= k;
+      if (!a.n) inv[from] = null;
+    } else { inv[to] = a; inv[from] = b; }
+    uiDirty = true;
+  }
+  // Click one slot, then another, to move or swap.
   function clickSlot(i) {
     if (pickSlot === null) {
       if (inv[i]) pickSlot = i;
     } else if (pickSlot === i) {
       pickSlot = null;
     } else {
-      const a = inv[pickSlot], b = inv[i];
-      if (b && a.id === b.id && b.n < stackOf(b.id)) {
-        const k = Math.min(a.n, stackOf(b.id) - b.n);
-        b.n += k; a.n -= k;
-        if (!a.n) inv[pickSlot] = null;
-      } else { inv[i] = a; inv[pickSlot] = b; }
+      moveSlot(pickSlot, i);
       pickSlot = null;
     }
     uiDirty = true;
   }
+
+  // Drag and drop between slots (inventory grid or hotbar). A press that doesn't move stays a click.
+  let drag = null, skipClick = false;
+  const eatClick = () => { if (!skipClick) return false; skipClick = false; return true; };
+  function startDrag(e, i) {
+    if (!inv[i] || e.button !== 0) return;
+    drag = { from: i, x0: e.clientX, y0: e.clientY, ghost: null, src: e.currentTarget };
+  }
+  window.addEventListener('pointermove', e => {
+    if (!drag) return;
+    if (!drag.ghost) {
+      if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
+      drag.ghost = document.createElement('div');
+      drag.ghost.className = 'drag-ghost';
+      drag.ghost.style.backgroundImage = `url(${ICON_URL[inv[drag.from].id]})`;
+      document.body.append(drag.ghost);
+      drag.src.classList.add('dragging');
+      pickSlot = null;
+    }
+    drag.ghost.style.transform = `translate(${e.clientX - 20}px, ${e.clientY - 20}px)`;
+  });
+  window.addEventListener('pointerup', e => {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    if (!d.ghost) return; // just a click
+    d.ghost.remove();
+    d.src.classList.remove('dragging');
+    const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-slot]');
+    if (target && inv[d.from]) { moveSlot(d.from, +target.dataset.slot); sfx.click(); }
+    skipClick = true;
+    setTimeout(() => { skipClick = false; }, 0);
+    uiDirty = true;
+  });
 
   function showOakTip() {
     say('oak', { force: true });
@@ -2953,7 +3365,7 @@
     const foe = enemyAtMouse();
     const noArrows = !ARROWS.some(a => count(a) > 0);
     if (it && it.bow) { if (!knows('shoot') || noArrows) list.push(['Left click', noArrows ? 'Shoot (no arrows)' : 'Shoot']); }
-    else if (foe && Math.hypot(centre(foe)[0] - centre(player)[0], centre(foe)[1] - centre(player)[1]) <= MELEE_REACH) {
+    else if (foe && reachOf(foe) <= MELEE_REACH) {
       if (!knows('attack')) list.push(['Left click', `Attack ${ENEMY[foe.type].name}`]);
     } else if (t.inReach) {
       const b = get(t.tx, t.ty);
@@ -2965,11 +3377,13 @@
         else if (!knows(chop ? 'chop' : 'mine')) list.push(['Left click', `${chop ? 'Chop' : 'Mine'} ${BLOCK[b].name}`]);
       } else if (b === B.AIR && it && it.block && hasSupport(t.tx, t.ty) && !knows('place')) list.push(['Right click', `Place ${it.name}`]);
     }
+    if (it && it.pipes) list.push(['Right click', inLair() ? 'Play the Bagpipes' : 'Play the Bagpipes (in the lair)']);
     if (it && it.bru && !knows('eat')) list.push(['Right click', 'Drink Irn Bru']);
     else if (it && (it.heal || it.food) && !knows('eat')) list.push(['Right click', it.id === 'bandage' ? 'Use Big Plaster' : `Eat ${it.name}`]);
     return list.slice(0, 2);
   }
   function coachPrompts() {
+    if (!knows('quickheal') && player.hp < maxHp() * 0.6 && inv.some(it => it && ITEM[it.id].heal && !ITEM[it.id].sick)) return [[['Q'], 'Quick heal']];
     if (onClimbable() && !knows('climb')) return [[['W'], 'Climb'], [['S'], 'Down']];
     if (!knows('walk')) return [[['A', 'D'], 'Walk']];
     if (!knows('jump')) return [[['Space'], 'Jump']];
@@ -3022,6 +3436,7 @@
       ['Blast craters', d.craters],
       ['Oak trees standing', d.oaks],
       ['Irn Bru machines', 'somewhere doon below'],
+      ['Mutant Haggis', "sleepin' at the bottom"],
       ['Pals', 'nane'],
       ['Scran', "dunno, go an' look"],
     ];
@@ -3053,7 +3468,7 @@
     return {
       v: 1, seed, tiles: btoa(s),
       inv: inv.map(it => it && [it.id, it.n]),
-      p: [player.x, player.y], hp: player.hp, food: player.food, sel: selected, progress,
+      p: [player.x, player.y], hp: player.hp, food: player.food, lair, sel: selected, progress,
     };
   }
   function deserialize(d) {
@@ -3069,6 +3484,8 @@
     [player.x, player.y] = d.p;
     selected = d.sel | 0;
     progress = d.progress || {};
+    progress.summoned = false;
+    lair = d.lair || makeLair(mulberry32(seed + 777)); // older saves: dig a lair into the loaded world
     scanChests();
     player.hp = typeof d.hp === 'number' ? d.hp : MAX_HP;
     player.food = typeof d.food === 'number' ? d.food : MAX_FOOD;
@@ -3094,6 +3511,7 @@
     enemies = []; arrows = []; floaters = [];
     spawnTimer = 30;
     resetWeather();
+    resetBoss();
     computeLight();
     snapCamera();
     uiDirty = true;
@@ -3130,6 +3548,10 @@
       drawFoodBar();
       drawWeatherChip();
       drawBuffChip();
+      if (boss) {
+        bossFill.style.width = `${Math.max(0, boss.hp) / boss.max * 100}%`;
+        bossBarEl.classList.toggle('enraged', boss.enraged);
+      }
       updatePrompts();
       requestAnimationFrame(frame);
     }
