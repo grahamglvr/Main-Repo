@@ -88,6 +88,31 @@
   .stars { display: flex; align-items: center; gap: 8px; height: 60px; padding: 0 22px 0 14px; border-radius: 999px; font-family: var(--display); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
   .stars svg { width: 36px; height: 36px; }
   .stars.bump { animation: bump .4s; }
+  .bar-right { display: flex; align-items: center; gap: 10px; }
+  .tier-wrap { position: relative; }
+  .tier { display: flex; align-items: center; gap: 9px; height: 60px; padding: 0 18px 0 16px; border-radius: 999px; font-family: var(--display); font-size: 20px; font-weight: 600; cursor: pointer; }
+  .bars { display: flex; align-items: flex-end; gap: 3px; height: 22px; flex: none; }
+  .bars i { width: 6px; border-radius: 3px; background: rgba(42, 27, 61, .15); }
+  .bars i:nth-child(1) { height: 40%; }
+  .bars i:nth-child(2) { height: 70%; }
+  .bars i:nth-child(3) { height: 100%; }
+  .bars i.on { background: var(--tc); }
+  .tier-menu { position: absolute; right: 0; top: calc(100% + 10px); z-index: 90; width: min(300px, calc(100vw - 32px)); padding: 8px; border-radius: 24px; display: flex; flex-direction: column; gap: 4px; background: rgba(255, 255, 255, .94); }
+  .tier-opt { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding: 10px 12px; border: 0; border-radius: 16px; background: none; text-align: left; cursor: pointer; }
+  .tier-opt:hover { background: rgba(42, 27, 61, .05); }
+  .tier-opt[aria-checked="true"] { background: color-mix(in srgb, var(--tc) 14%, #fff); }
+  .tier-opt b { display: block; font-family: var(--display); font-size: 21px; font-weight: 600; }
+  .tier-opt small { display: block; font-size: 13px; font-weight: 700; color: var(--ink-2); line-height: 1.3; }
+  .tier-opt .tick { width: 24px; height: 24px; color: var(--tc); visibility: hidden; }
+  .tier-opt[aria-checked="true"] .tick { visibility: visible; }
+  @media (max-width: 480px) {
+    .bar, .bar-right { gap: 8px; }
+    .icon-btn { width: 54px; height: 54px; }
+    .stars, .tier { height: 54px; }
+    .stars { font-size: 26px; padding: 0 16px 0 10px; }
+    .stars svg { width: 30px; height: 30px; }
+    .tier { font-size: 17px; padding: 0 14px 0 12px; }
+  }
 
   #screen { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; }
   .stack { margin-block: auto; padding-block: 8px 24px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: clamp(14px, 3vh, 28px); }
@@ -140,8 +165,7 @@
   .tile.featured .copy { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; flex: 1; }
   .tile.featured .label { font-size: clamp(26px, 5.5vw, 36px); }
   .new { padding: 5px 12px; border-radius: 999px; background: var(--lemon); color: var(--ink); font-weight: 900; font-size: 12px; letter-spacing: 1.4px; box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .3); }
-  .mini-stack { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 0; --cell: clamp(22px, 5vw, 32px); --bh: calc(var(--cell) * .9); --stud: calc(var(--cell) * .2); padding-top: var(--stud); transform: rotate(-4deg); filter: drop-shadow(0 12px 12px rgba(0, 0, 0, .2)); }
-  .mini-stack .brick { cursor: pointer; }
+  .model-art { position: relative; z-index: 1; flex: none; --cell: clamp(15px, 3.6vw, 22px); width: calc(8 * var(--cell)); height: calc(4 * var(--cell)); transform: rotate(-3deg); }
   .book { width: 100%; max-width: 900px; border-radius: 26px; padding: 14px 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
   .book h2 { margin: 0 8px 0 0; font-family: var(--display); font-size: 20px; font-weight: 600; }
   .book .sticker { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: #fff; font-size: 28px; box-shadow: 0 6px 12px -6px rgba(42, 27, 61, .35); }
@@ -230,30 +254,20 @@
   .choices { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(14px, 4vw, 28px); }
   .choice { width: clamp(98px, 25vw, 136px); aspect-ratio: 1; font-size: clamp(58px, 14vw, 84px); background: var(--c); }
 
-  /* Brick builder */
-  .builder { display: flex; flex-direction: column; align-items: center; gap: 22px; width: 100%; }
-  .plate { position: relative; width: calc(var(--cols) * var(--cell)); height: calc(var(--rows) * var(--bh) + var(--base-h)); }
-  .baseplate { position: absolute; left: calc(var(--cell) * -.4); right: calc(var(--cell) * -.4); bottom: 0; height: var(--base-h); border-radius: 10px; background: linear-gradient(180deg, #4FD98A, #22B060); box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .15), 0 22px 30px -16px rgba(10, 80, 40, .6); }
-  .baseplate::before { content: ""; position: absolute; left: calc(var(--cell) * .4); right: calc(var(--cell) * .4); top: calc(var(--stud) * -1 + 1px); height: var(--stud); background: repeating-linear-gradient(90deg, transparent 0 calc(var(--cell) * .22), #3FCB7C calc(var(--cell) * .22) calc(var(--cell) * .78), transparent calc(var(--cell) * .78) var(--cell)); }
+  /* Brick builder: flat 2D pieces drawn as SVG */
+  .builder { display: flex; flex-direction: column; align-items: center; gap: 24px; width: 100%; }
+  .plate { position: relative; width: calc(var(--cols) * var(--cell)); height: calc(var(--rows) * var(--cell) + var(--base-h)); }
+  .baseplate { position: absolute; left: calc(var(--cell) * -.4); right: calc(var(--cell) * -.4); bottom: 0; height: var(--base-h); border-radius: 8px; background: #3CCB6E; box-shadow: inset 0 -4px 0 #22A559; }
+  .baseplate::before { content: ""; position: absolute; left: calc(var(--cell) * .4); right: calc(var(--cell) * .4); top: calc(var(--stud) * -1); height: var(--stud); background: repeating-linear-gradient(90deg, transparent 0 calc(var(--cell) * .25), #3CCB6E calc(var(--cell) * .25) calc(var(--cell) * .75), transparent calc(var(--cell) * .75) var(--cell)); }
   .build { position: absolute; left: 0; right: 0; top: 0; bottom: var(--base-h); }
-  .brick {
-    --w: 1;
-    position: relative;
-    width: calc(var(--w) * var(--cell)); height: var(--bh);
-    border-radius: 5px;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--c) 72%, #fff) 0, var(--c) 28%, color-mix(in srgb, var(--c) 84%, #000) 100%);
-    box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .16), inset 0 2px 0 rgba(255, 255, 255, .4);
-    display: flex; justify-content: space-around;
-    touch-action: none; cursor: grab;
-  }
-  .brick i { position: relative; top: calc(var(--stud) * -1 + 1px); width: calc(var(--cell) * .56); height: var(--stud); border-radius: 5px 5px 1px 1px; background: linear-gradient(90deg, color-mix(in srgb, var(--c) 82%, #000), color-mix(in srgb, var(--c) 60%, #fff) 35%, var(--c) 70%, color-mix(in srgb, var(--c) 82%, #000)); }
-  .tray-bricks { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: calc(var(--stud) + 14px) 14px; padding-top: var(--stud); max-width: 100%; }
-  .tray-bricks .brick { filter: drop-shadow(0 10px 8px rgba(42, 27, 61, .22)); }
-  .brick.placed, .ghost { position: absolute; left: calc(var(--x) * var(--cell)); bottom: calc(var(--y) * var(--bh)); }
-  .brick.placed { cursor: default; filter: none; animation: click-in .28s ease-out; }
-  .ghost { width: calc(var(--w) * var(--cell)); height: var(--bh); border-radius: 6px; border: 3px dashed color-mix(in srgb, var(--c) 70%, #2A1B3D); background: color-mix(in srgb, var(--c) 30%, rgba(42, 27, 61, .06)); cursor: pointer; }
+  .parts { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 22px 18px; padding-top: 8px; max-width: 100%; }
+  .part { position: relative; width: calc(var(--w) * var(--cell) * var(--ts, 1)); height: calc(var(--h) * var(--cell) * var(--ts, 1)); touch-action: none; cursor: grab; }
+  .part svg, .ghost svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .build .part, .model-art .part, .ghost { position: absolute; left: calc(var(--x) * var(--cell)); bottom: calc(var(--y) * var(--cell)); width: calc(var(--w) * var(--cell)); height: calc(var(--h) * var(--cell)); }
+  .build .part { cursor: default; animation: click-in .28s ease-out; }
+  .ghost { z-index: 1; pointer-events: none; }
   .ghost.filled { visibility: hidden; }
-  .deco { position: absolute; left: calc(var(--x) * var(--cell)); bottom: calc(var(--y) * var(--bh)); translate: -50% 0; font-size: calc(var(--cell) * 1.1); animation: pop .5s cubic-bezier(.3, 1.6, .6, 1); z-index: 30; }
+  .deco { position: absolute; left: calc(var(--x) * var(--cell)); bottom: calc(var(--y) * var(--cell)); translate: -50% 0; font-size: calc(var(--cell) * 1.1); animation: pop .5s cubic-bezier(.3, 1.6, .6, 1); z-index: 40; }
   .build.fx-launch { animation: launch 2.6s ease-in .2s forwards; }
   .build.fx-drive { animation: drive 2.4s ease-in .2s forwards; }
   .build.fx-sail { animation: sail 1.6s ease-in-out infinite; transform-origin: 50% 100%; }
@@ -322,7 +336,13 @@
   <header class="bar">
     <button id="homeBtn" class="icon-btn glass" type="button" aria-label="Back to all games"></button>
     <button id="stars" class="stars glass" type="button" aria-label="Stars collected"><span class="star-icon"></span><span id="starCount">0</span></button>
-    <button id="soundBtn" class="icon-btn glass" type="button" aria-label="Turn sound off"></button>
+    <div class="bar-right">
+      <div class="tier-wrap">
+        <button id="tierBtn" class="tier glass" type="button" aria-haspopup="menu" aria-expanded="false"></button>
+        <div id="tierMenu" class="tier-menu glass" role="menu" hidden></div>
+      </div>
+      <button id="soundBtn" class="icon-btn glass" type="button" aria-label="Turn sound off"></button>
+    </div>
   </header>
   <main id="screen"></main>
 </div>
@@ -375,6 +395,7 @@
     star: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE45C"/><stop offset="1" stop-color="#FFAE00"/></linearGradient></defs><path d="M12 2.4l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.3l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z" fill="url(#sg)" stroke="#F09A00" stroke-width="1.1" stroke-linejoin="round"/></svg>',
     play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.2-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z" fill="currentColor"/></svg>',
     speaker: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.2h3.7l5.1-4.3v14.2l-5.1-4.3H3.5z" fill="currentColor"/><path d="M15.6 8.6a5 5 0 0 1 0 6.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+    tick: '<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     sparkle: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c1 7.6 4.4 11 12 12-7.6 1-11 4.4-12 12-1-7.6-4.4-11-12-12C7.6 11 11 7.6 12 0z" fill="currentColor"/></svg>',
   };
 
@@ -385,7 +406,13 @@
     { name: 'pink', hex: '#FF5FB1' }, { name: 'brown', hex: '#9C6B3F' },
   ];
   const SORT_COLOURS = ['red', 'yellow', 'green', 'blue', 'pink', 'purple'];
-  const BRICK = { red: '#FF3B30', orange: '#FF8A1F', yellow: '#FFC61A', green: '#2DC56E', blue: '#2E7BFF', purple: '#8A5CFF', pink: '#FF5FB1', brown: '#A0632F', white: '#F2F0F7', black: '#3A3444' };
+  // Piece colours: [fill, the colour word the voice says].
+  const BRICK = {
+    red: ['#FF4D4D', 'red'], orange: ['#FF9A2E', 'orange'], yellow: ['#FFD23F', 'yellow'], green: ['#3CCB6E', 'green'],
+    leaf: ['#22A559', 'green'], blue: ['#3B82FF', 'blue'], glass: ['#9EDCFF', 'blue'], purple: ['#9B6BFF', 'purple'],
+    pink: ['#FF6FB8', 'pink'], mint: ['#7FE3C0', 'green'], brown: ['#B8733A', 'brown'], wood: ['#7A4A26', 'brown'],
+    wafer: ['#F4B860', 'orange'], white: ['#FFFFFF', 'white'], grey: ['#A9A3B8', 'grey'], black: ['#37323F', 'black'],
+  };
   const NUMBER_WORDS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
   const PRAISE = ['Well done, Lily!', 'Amazing!', 'Super star!', 'You did it!', 'Brilliant!', 'Hooray!', 'Fantastic, Lily!', 'Wow, clever girl!', 'Yay! Great job!'];
   const OOPS = ['Oops! Try again!', 'Nearly! Have another go!', 'Not that one. Try again!'];
@@ -406,27 +433,31 @@
   };
   const SHADOW_ITEMS = ['🦇', '🐶', '🦄', '👑', '🍭', '⭐', '🏰', '🦋', '🐙', '🌙', '🍎', '🚒', '🧁', '👻', '🦜', '🐳', '🎈', '🍦', '🐢', '🦀', '⚓', '🦕', '🐘', '🐸'];
   const DRESS = ['👗', '👠', '👑', '🎀', '💄', '👛', '💍', '💖', '🌸', '🦋', '⭐', '🦄'];
-  // Bricks are [x, y, width, colour] on a 6-stud-wide plate; y = 0 is the bottom row.
-  // Decorations are [emoji, x centre, y] in the same units and appear when the model is finished.
+  // Pieces are [shape, x, y, width, height, colour] on a plate 8 units wide; y = 0 sits on the plate.
+  // Shapes: brick (has studs), tile, ladder, round, roof, slopeR / slopeL (tall side on the right / left),
+  // trap (car cabin), hull (boat), cone (ice-cream cone), door. Pieces later in the list draw on top.
+  // Decorations are [emoji, x centre, y] and appear when the model is finished.
   const MODELS = [
-    { id: 'tower', name: 'rainbow tower', level: 0, fx: 'wobble', done: 'You built a rainbow tower! Well done, Lily!',
-      bricks: [[1, 0, 4, 'red'], [1, 1, 4, 'yellow'], [1, 2, 4, 'green'], [1, 3, 4, 'blue']], deco: [['⭐', 3, 4.1]] },
-    { id: 'car', name: 'car', level: 0, fx: 'drive', done: 'Vroom vroom! You built a car!',
-      bricks: [[1, 0, 1, 'black'], [4, 0, 1, 'black'], [0, 1, 6, 'red'], [1, 2, 4, 'blue']], deco: [['🐶', 3, 3.1]] },
-    { id: 'flower', name: 'flower', level: 0, fx: 'grow', done: 'You built a pretty flower!',
-      bricks: [[2, 0, 2, 'green'], [2, 1, 2, 'green'], [1, 2, 4, 'pink'], [2, 3, 2, 'yellow']], deco: [['🦋', 5.4, 3.4]] },
-    { id: 'rocket', name: 'rocket', level: 1, fx: 'launch', done: 'Three, two, one, blast off! You built a rocket!',
-      bricks: [[1, 0, 1, 'red'], [2, 0, 2, 'white'], [4, 0, 1, 'red'], [2, 1, 2, 'blue'], [2, 2, 2, 'white'], [2, 3, 2, 'red']], deco: [['🔥', 3, -1.3]] },
-    { id: 'boat', name: 'boat', level: 1, fx: 'sail', done: 'Ahoy! You built a boat!',
-      bricks: [[1, 0, 4, 'brown'], [0, 1, 6, 'brown'], [1, 2, 2, 'white'], [3, 2, 1, 'black'], [1, 3, 2, 'white'], [3, 3, 1, 'black']], deco: [['🏴‍☠️', 3.6, 4.05]] },
-    { id: 'kennel', name: 'puppy house', level: 1, fx: 'hop', done: 'Woof woof! You built a puppy house!',
-      bricks: [[1, 0, 1, 'red'], [4, 0, 1, 'red'], [1, 1, 4, 'red'], [0, 2, 6, 'blue'], [2, 3, 2, 'blue']], deco: [['🐶', 3, 0.02]] },
-    { id: 'house', name: 'house', level: 2, fx: 'hop', done: 'You built a lovely house!',
-      bricks: [[0, 0, 2, 'yellow'], [2, 0, 2, 'blue'], [4, 0, 2, 'yellow'], [0, 1, 6, 'yellow'], [0, 2, 6, 'red'], [1, 3, 4, 'red'], [2, 4, 2, 'red']], deco: [['🌞', 5.4, 4.4]] },
-    { id: 'castle', name: 'princess castle', level: 2, fx: 'wobble', done: 'You built a princess castle!',
-      bricks: [[0, 0, 2, 'pink'], [2, 0, 2, 'purple'], [4, 0, 2, 'pink'], [0, 1, 6, 'pink'], [0, 2, 1, 'pink'], [2, 2, 2, 'pink'], [5, 2, 1, 'pink'], [2, 3, 2, 'purple']], deco: [['👑', 3, 4.1]] },
-    { id: 'ship', name: 'pirate ship', level: 2, fx: 'sail', done: 'Arr! You built a pirate ship!',
-      bricks: [[1, 0, 4, 'brown'], [0, 1, 6, 'brown'], [1, 2, 2, 'white'], [3, 2, 1, 'black'], [1, 3, 2, 'white'], [3, 3, 1, 'black'], [3, 4, 1, 'black']], deco: [['🏴‍☠️', 3.6, 5.05], ['🦜', 5.3, 2.1]] },
+    { id: 'car', a: 'a car', level: 0, fx: 'drive', done: 'Vroom vroom! You built a car!',
+      parts: [['brick', 0, 1, 8, 1.5, 'red'], ['trap', 1.5, 2.5, 5, 1.4, 'glass'], ['round', 1, 0, 2, 2, 'black'], ['round', 5, 0, 2, 2, 'black']], deco: [] },
+    { id: 'boat', a: 'a sailing boat', level: 0, fx: 'sail', done: 'Ahoy! You built a sailing boat!',
+      parts: [['hull', 0, 0, 8, 1.5, 'brown'], ['tile', 3.8, 1.5, 0.4, 4.5, 'wood'], ['slopeR', 1.1, 2, 2.5, 3.8, 'white'], ['slopeL', 4.4, 2, 2.2, 3, 'red']], deco: [] },
+    { id: 'tree', a: 'an apple tree', level: 0, fx: 'grow', done: 'You built an apple tree!',
+      parts: [['brick', 3.4, 0, 1.2, 2.6, 'wood'], ['round', 1.5, 2, 5, 4.4, 'leaf'], ['round', 2.6, 3.3, 1, 1, 'red'], ['round', 4.5, 4.4, 1, 1, 'red']], deco: [['🐦', 6.9, 4.4]] },
+    { id: 'icecream', a: 'an ice cream', level: 0, fx: 'wobble', done: 'Yummy! You built an ice cream!',
+      parts: [['cone', 3, 0, 2, 2.4, 'wafer'], ['round', 2.6, 2, 2.8, 2.2, 'pink'], ['round', 2.8, 3.6, 2.4, 2, 'mint'], ['round', 3.6, 5.4, 0.8, 0.8, 'red']], deco: [] },
+    { id: 'rocket', a: 'a rocket', level: 1, fx: 'launch', done: 'Three, two, one, blast off! You built a rocket!',
+      parts: [['brick', 3, 0, 2, 4.4, 'white'], ['slopeR', 2, 0, 1, 2, 'red'], ['slopeL', 5, 0, 1, 2, 'red'], ['roof', 3, 4.4, 2, 2, 'red'], ['round', 3.4, 2.5, 1.2, 1.2, 'glass']], deco: [['🔥', 4, -1.3]] },
+    { id: 'house', a: 'a house', level: 1, fx: 'hop', done: 'You built a lovely house!',
+      parts: [['brick', 5.2, 3.6, 0.9, 2, 'grey'], ['brick', 1, 0, 6, 3.5, 'yellow'], ['roof', 0.4, 3.5, 7.2, 3, 'red'], ['door', 1.8, 0, 1.4, 2.4, 'brown'], ['tile', 4, 1.3, 1.2, 1.2, 'glass'], ['tile', 5.4, 1.3, 1.2, 1.2, 'glass']], deco: [['🌞', 7.3, 5.2]] },
+    { id: 'firetruck', a: 'a fire engine', level: 1, fx: 'drive', done: 'Nee naw! You built a fire engine!',
+      parts: [['brick', 0, 1, 8, 2.2, 'red'], ['brick', 5.5, 3.2, 2.5, 1.6, 'red'], ['tile', 6.1, 3.5, 1.4, 1, 'glass'], ['ladder', 0.4, 3.2, 4.6, 0.6, 'grey'], ['round', 0.8, 0, 2, 2, 'black'], ['round', 5.4, 0, 2, 2, 'black']], deco: [['🚨', 6.75, 4.8]] },
+    { id: 'flower', a: 'a flower', level: 2, fx: 'grow', done: 'You built a pretty flower!',
+      parts: [['tile', 3.7, 0, 0.6, 3.2, 'green'], ['slopeR', 2.5, 0.8, 1.2, 1.2, 'leaf'], ['slopeL', 4.3, 1.4, 1.2, 1.2, 'leaf'], ['round', 1.9, 3, 2, 2, 'pink'], ['round', 4.1, 3, 2, 2, 'pink'], ['round', 3, 4.1, 2, 2, 'pink'], ['round', 3.2, 3.2, 1.6, 1.6, 'yellow']], deco: [['🦋', 6.9, 4.6]] },
+    { id: 'castle', a: 'a princess castle', level: 2, fx: 'wobble', done: 'You built a princess castle!',
+      parts: [['brick', 2, 0, 4, 3.2, 'pink'], ['brick', 0, 0, 2, 4.5, 'purple'], ['brick', 6, 0, 2, 4.5, 'purple'], ['brick', 2, 3.2, 1, 0.8, 'pink'], ['brick', 5, 3.2, 1, 0.8, 'pink'], ['door', 3.2, 0, 1.6, 2.2, 'brown'], ['roof', -0.2, 4.5, 2.4, 2.2, 'pink'], ['roof', 5.8, 4.5, 2.4, 2.2, 'pink']], deco: [['👑', 4, 3.2]] },
+    { id: 'ship', a: 'a pirate ship', level: 2, fx: 'sail', done: 'Arr! You built a pirate ship!',
+      parts: [['hull', 0, 0, 8, 1.8, 'brown'], ['tile', 3.8, 1.8, 0.4, 4.4, 'wood'], ['tile', 2, 2.5, 4, 1.8, 'white'], ['tile', 2.5, 4.5, 3, 1.3, 'white'], ['round', 1.6, 0.6, 0.8, 0.8, 'glass'], ['round', 3.6, 0.6, 0.8, 0.8, 'glass'], ['round', 5.6, 0.6, 0.8, 0.8, 'glass']], deco: [['🏴‍☠️', 4.6, 6.1]] },
   ];
   const slug = (s) => s.replace(/\s+/g, '_');
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -442,7 +473,8 @@
       'jig.done': 'You finished the picture! Well done, Lily!', 'jig.wrong': 'Not there. Try another spot!',
       'shadow.yes': 'Yes! You found the shadow!', 'shadow.no': 'Hmm, not that one. Look at the shape again!',
       'pat.intro': 'Look at the pattern. What comes next?', 'pat.yes': "Yes! That's what comes next!", 'pat.no': 'Hmm, look at the pattern again!',
-      'build.wrong': "That brick doesn't fit there. Look for the same colour and size!",
+      'build.wrong': "That piece doesn't fit there. Look for the same colour and shape!",
+      'tier.0': 'Easy!', 'tier.1': 'Medium!', 'tier.2': 'Hard!',
     };
     PRAISE.forEach((t, i) => { L['praise.' + i] = t; });
     OOPS.forEach((t, i) => { L['oops.' + i] = t; });
@@ -451,14 +483,14 @@
       L['yes.' + c] = `Yes, ${c}!`;
       L['is.' + c] = `That one is ${c}. Try again!`;
     });
-    Object.keys(BRICK).forEach((c) => { L['col.' + c] = cap(c) + '!'; });
+    new Set(Object.values(BRICK).map(([, word]) => word)).forEach((c) => { L['col.' + c] = cap(c) + '!'; });
     SORT_COLOURS.forEach((c) => { L['chest.' + c] = `The ${c} chest.`; L['pick.' + c] = `${cap(c)}! Now tap the ${c} chest.`; });
     NUMBER_WORDS.forEach((w, i) => { L['n.' + (i + 1)] = cap(w) + '!'; L['thats.' + (i + 1)] = `That's ${w}. Let's count them again!`; });
     THINGS.forEach((t) => { L['count.' + t.id] = `How many ${t.many} can you count? Tap them to count!`; });
     Object.entries(SCENE_NAMES).forEach(([id, n]) => { L['jig.' + id] = `Let's build the ${n} picture! Drag the pieces onto the picture.`; });
     Object.values(NAMES).forEach((n) => { L['name.' + slug(n)] = cap(n) + '!'; });
     SHADOW_ITEMS.forEach((e) => { L['shadow.' + slug(NAMES[e])] = `Which shadow belongs to the ${NAMES[e]}?`; });
-    MODELS.forEach((m) => { L['build.' + m.id] = `Let's build a ${m.name}! Put each brick on its matching shape.`; L['done.' + m.id] = m.done; });
+    MODELS.forEach((m) => { L['build.' + m.id] = `Let's build ${m.a}! Put each piece on its matching shape.`; L['done.' + m.id] = m.done; });
     return L;
   })();
   // VOICE-LINES:END
@@ -659,7 +691,7 @@
   function startGame(game) {
     endRun(); hush();
     cheer.hidden = true;
-    run = { game, alive: true, timers: [], cleanups: [], wins: 0, misses: 0, level: store.get('lvl-' + game.id, 0), busy: false, last: null };
+    run = { game, alive: true, timers: [], cleanups: [], wins: 0, level: tier, busy: false, last: null };
     document.body.className = game.theme;
     homeBtn.style.visibility = 'visible';
     nextRound();
@@ -679,18 +711,13 @@
     sfx('yay'); say(keys); burstAt(el, 24); flyStar(el);
     run.wins++;
     if (run.wins >= run.game.goal) {
-      // Gently adjust difficulty: step up after a smooth set, step back after a bumpy one.
-      if (run.misses <= 2) run.level = Math.min(2, run.level + 1);
-      else if (run.misses >= 6) run.level = Math.max(0, run.level - 1);
-      store.set('lvl-' + run.game.id, run.level);
-      run.wins = 0; run.misses = 0;
+      run.wins = 0;
       later(celebrate, run.game.celebrateAfter || 1600);
     } else {
       later(nextRound, 2100);
     }
   }
   function miss(el, key) {
-    run.misses++;
     sfx('oops'); say(key || oops());
     el.classList.remove('wiggle'); void el.offsetWidth; el.classList.add('wiggle');
   }
@@ -716,6 +743,38 @@
     if (soundOn) { sfx('pop'); say('sound_on'); } else hush();
   });
   paintSound();
+
+  const TIERS = [
+    { name: 'Easy', colour: '#2DC56E', note: 'Fewest choices, count to 3, 4-piece jigsaws' },
+    { name: 'Medium', colour: '#FF9A1F', note: 'More choices, count to 5, 6-piece jigsaws' },
+    { name: 'Hard', colour: '#FF3D6E', note: 'Most choices, count to 10, 9-piece jigsaws' },
+  ];
+  let tier = Math.min(2, Math.max(0, Number(store.get('tier', 0)) || 0));
+  const tierBtn = $('#tierBtn'), tierMenu = $('#tierMenu');
+  const bars = (n) => `<span class="bars" aria-hidden="true">${[0, 1, 2].map((i) => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
+  function paintTier() {
+    tierBtn.style.setProperty('--tc', TIERS[tier].colour);
+    tierBtn.innerHTML = `${bars(tier)}<span>${TIERS[tier].name}</span>`;
+    tierBtn.setAttribute('aria-label', `Difficulty: ${TIERS[tier].name}`);
+    tierMenu.replaceChildren(...TIERS.map((t, i) => {
+      const o = h('button', { class: 'tier-opt', type: 'button', role: 'menuitemradio', 'aria-checked': String(i === tier), style: `--tc:${t.colour}`,
+        html: `${bars(i)}<span><b>${t.name}</b><small>${t.note}</small></span>${ICONS.tick}` });
+      o.addEventListener('click', () => chooseTier(i));
+      return o;
+    }));
+  }
+  function showTierMenu(open) { tierMenu.hidden = !open; tierBtn.setAttribute('aria-expanded', String(open)); }
+  tierBtn.addEventListener('click', () => { sfx('pop'); showTierMenu(tierMenu.hidden); });
+  document.addEventListener('pointerdown', (e) => { if (!tierMenu.hidden && !e.target.closest('.tier-wrap')) showTierMenu(false); });
+  function chooseTier(i) {
+    showTierMenu(false);
+    const changed = i !== tier;
+    tier = i; store.set('tier', tier); paintTier();
+    sfx('pop'); say('tier.' + i);
+    // Restart the current game at the new difficulty.
+    if (run && changed) { run.level = tier; run.wins = 0; cheer.hidden = true; nextRound(); }
+  }
+  paintTier();
 
   function bubble(who, html, keys) {
     const b = h('button', { class: 'bubble glass', type: 'button', 'aria-label': 'Hear it again' },
@@ -779,10 +838,63 @@
     for (const z of zones) { const c = centre(z); const d = Math.hypot(x - c.x, y - c.y); if (d < bd) { bd = d; best = z; } }
     return best;
   }
-  function brickEl(w, colour) {
-    const b = h('div', { class: 'brick', style: `--w:${w};--c:${BRICK[colour]}` });
-    for (let i = 0; i < w; i++) b.append(h('i'));
-    return b;
+  const shade = (hex, k) => '#' + [16, 8, 0].map((b) => Math.round(((parseInt(hex.slice(1), 16) >> b) & 255) * k).toString(16).padStart(2, '0')).join('');
+  // Draws one flat piece as SVG, 10 units per grid square. studs: which stud positions to show (bricks only; null = all).
+  function partSVG([k, , , w, h, col], { ghost = false, studs = null } = {}) {
+    const W = w * 10, H = h * 10, fill = BRICK[col][0], edge = shade(fill, col === 'white' ? (ghost ? 0.55 : 0.78) : 0.7);
+    const line = 'vector-effect="non-scaling-stroke" stroke-linejoin="round"';
+    const paint = ghost ? `fill="${fill}" fill-opacity=".3" stroke="${edge}" stroke-width="2.5" stroke-dasharray="6 5" ${line}` : `fill="${fill}" stroke="${edge}" stroke-width="2" ${line}`;
+    const poly = (pts) => `<polygon points="${pts}" ${paint}/>`;
+    let body;
+    if (k === 'round') body = `<ellipse cx="${W / 2}" cy="${H / 2}" rx="${W / 2}" ry="${H / 2}" ${paint}/>`;
+    else if (k === 'roof') body = poly(`${W / 2},0 ${W},${H} 0,${H}`);
+    else if (k === 'slopeR') body = poly(`0,${H} ${W},0 ${W},${H}`);
+    else if (k === 'slopeL') body = poly(`0,0 ${W},${H} 0,${H}`);
+    else if (k === 'cone') body = poly(`0,0 ${W},0 ${W / 2},${H}`);
+    else if (k === 'trap') { const i = Math.min(H, W / 3); body = poly(`${i},0 ${W - i},0 ${W},${H} 0,${H}`); }
+    else if (k === 'hull') { const i = Math.min(H, W / 4) * 0.8; body = poly(`0,0 ${W},0 ${W - i},${H} ${i},${H}`); }
+    else if (k === 'door') body = `<path d="M0,${H} V${W / 2} A${W / 2},${W / 2} 0 0 1 ${W},${W / 2} V${H} Z" ${paint}/>`;
+    else body = `<rect width="${W}" height="${H}" rx="${Math.min(1.5, W / 4)}" ${paint}/>`;
+    let top = '', extra = '';
+    if (!ghost) {
+      const n = k === 'brick' ? Math.floor(w + 1e-6) : 0;
+      for (let i = 0; i < n; i++) {
+        if (studs && !studs.includes(i)) continue;
+        top += `<rect x="${(i + 0.5) * W / n - 2.6}" y="-2.6" width="5.2" height="3.4" rx="1" fill="${fill}" stroke="${edge}" stroke-width="2" ${line}/>`;
+      }
+      if (k === 'round') {
+        extra += col === 'black'
+          ? `<circle cx="${W / 2}" cy="${H / 2}" r="${Math.min(W, H) * 0.2}" fill="#CFCAD9"/>`
+          : `<ellipse cx="${W * 0.35}" cy="${H * 0.33}" rx="${W * 0.13}" ry="${H * 0.13}" fill="#fff" fill-opacity=".5"/>`;
+      }
+      if (col === 'glass' && k !== 'round') extra += `<path d="M${W * 0.25},${H * 0.75} L${W * 0.5},${H * 0.25}" stroke="#fff" stroke-width="3" stroke-opacity=".8" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+      if (k === 'door') extra += `<circle cx="${W * 0.74}" cy="${H * 0.62}" r="${Math.min(W, H) * 0.08}" fill="${edge}"/>`;
+      if (k === 'ladder') for (let x = 6; x < W; x += 6) extra += `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="${edge}" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+    }
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${top}${body}${extra}</svg>`;
+  }
+  // A brick only shows the studs that nothing sits on, like the real thing.
+  function studsFor(parts, i) {
+    const [k, x, y, w, h] = parts[i];
+    if (k !== 'brick') return [];
+    const n = Math.floor(w + 1e-6), top = y + h, shown = [];
+    for (let s = 0; s < n; s++) {
+      const cx = x + (s + 0.5) * w / n;
+      if (!parts.some((q, j) => j !== i && Math.abs(q[2] - top) < 0.15 && q[1] <= cx && cx <= q[1] + q[3])) shown.push(s);
+    }
+    return shown;
+  }
+  function partEl(p, opts) {
+    return h('div', { class: 'part', style: `--w:${p[3]};--h:${p[4]}`, html: partSVG(p, opts) });
+  }
+  function modelArt(model) {
+    const art = h('div', { class: 'model-art', 'aria-hidden': 'true' });
+    model.parts.forEach((p, i) => {
+      const el = partEl(p, { studs: studsFor(model.parts, i) });
+      el.style.cssText += `;--x:${p[1]};--y:${p[2]};z-index:${i + 1}`;
+      art.append(el);
+    });
+    return art;
   }
 
   // ---------- 1. Unicorn Colours: tap the balloon that matches ----------
@@ -1036,7 +1148,7 @@
 
   // ---------- 5. Vampire Shadows: match a picture to its shadow ----------
   function shadowRound(run) {
-    const n = [3, 3, 4][run.level];
+    const n = [3, 4, 5][run.level];
     const target = pickNot(SHADOW_ITEMS, run.last); run.last = target;
     const opts = shuffle([target, ...shuffle(SHADOW_ITEMS.filter((e) => e !== target)).slice(0, n - 1)]);
     const name = NAMES[target];
@@ -1093,64 +1205,71 @@
     run.root.append(row, choices);
   }
 
-  // ---------- 7. Brick Builder: put each brick on its matching outline ----------
+  // ---------- 7. Brick Builder: put each piece on its matching outline ----------
   function buildRound(run) {
     const model = pickNot(MODELS.filter((m) => m.level === run.level), run.last); run.last = model;
-    const COLS = 6;
-    const rows = Math.max(...model.bricks.map((b) => b[1])) + 2;
-    const bub = bubble('👷‍♀️', `Let's build a ${model.name}!`, 'build.' + model.id);
+    const COLS = 8;
+    const rows = Math.ceil(Math.max(...model.parts.map((p) => p[2] + p[4]), ...model.deco.map((d) => d[2] + 1.2)));
+    const bub = bubble('👷‍♀️', `Let's build ${model.a}!`, 'build.' + model.id);
     const wrap = h('div', { class: 'builder' });
     wrap.style.setProperty('--cols', COLS);
     wrap.style.setProperty('--rows', rows);
     const plate = h('div', { class: 'plate' });
     const build = h('div', { class: 'build' });
     plate.append(h('div', { class: 'baseplate' }), build);
-    const tray = h('div', { class: 'tray-bricks' });
-    let selected = null, left = model.bricks.length;
+    const tray = h('div', { class: 'parts' });
+    let selected = null, left = model.parts.length;
     const unpick = () => { if (selected) selected.classList.remove('picked'); selected = null; };
+    const sig = (p) => `${p[0]}|${p[3]}|${p[4]}|${p[5]}`;
 
-    const ghosts = model.bricks.map(([x, y, w, c]) => {
-      const g = h('div', { class: 'ghost', style: `--x:${x};--y:${y};--w:${w};--c:${BRICK[c]}` });
-      Object.assign(g.dataset, { w, c, x, y });
-      g.addEventListener('click', () => { if (selected && !run.busy) tryPlace(selected, g); });
+    const ghosts = model.parts.map((p, i) => {
+      const g = h('div', { class: 'ghost', style: `--x:${p[1]};--y:${p[2]};--w:${p[3]};--h:${p[4]}`, html: partSVG(p, { ghost: true }) });
+      g.dataset.sig = sig(p); g.dataset.i = i;
       build.append(g);
       return g;
     });
-    const fits = (b, g) => !g.dataset.filled && g.dataset.w === b.dataset.w && g.dataset.c === b.dataset.c;
+    const open = () => ghosts.filter((g) => !g.dataset.filled);
+    const under = (x, y) => open().filter((g) => { const r = g.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; });
+    const cellPx = () => parseFloat(wrap.style.getPropertyValue('--cell')) || 40;
 
-    shuffle(model.bricks).forEach(([, , w, c]) => {
-      const b = brickEl(w, c);
-      b.setAttribute('role', 'button');
-      b.setAttribute('aria-label', `${c} brick`);
-      Object.assign(b.dataset, { w, c });
-      draggable(b, {
+    shuffle(model.parts).forEach((p) => {
+      const el = partEl(p);
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', `${BRICK[p[5]][1]} piece`);
+      el.dataset.sig = sig(p);
+      draggable(el, {
         onDrop: (x, y) => {
-          const cell = parseFloat(wrap.style.getPropertyValue('--cell')) || 50;
-          const match = nearest(ghosts.filter((g) => fits(b, g)), x, y, cell * 1.6);
-          if (match) return tryPlace(b, match);
-          const over = zoneAt(ghosts.filter((g) => !g.dataset.filled), x, y, 0);
-          return over ? tryPlace(b, over) : false;
+          const match = nearest(open().filter((g) => g.dataset.sig === el.dataset.sig), x, y, cellPx() * 2);
+          if (match) return place(el, match);
+          if (under(x, y).length) { unpick(); miss(el, 'build.wrong'); }
+          return false;
         },
-        onTap: () => { unpick(); selected = b; b.classList.add('picked'); say(['col.' + c, 'tapwhere']); },
+        onTap: () => { unpick(); selected = el; el.classList.add('picked'); say(['col.' + BRICK[p[5]][1], 'tapwhere']); },
       });
-      tray.append(b);
+      tray.append(el);
+    });
+    plate.addEventListener('click', (e) => {
+      if (!selected || run.busy) return;
+      const over = under(e.clientX, e.clientY);
+      const match = over.find((g) => g.dataset.sig === selected.dataset.sig);
+      if (match) place(selected, match);
+      else if (over.length) { const el = selected; unpick(); miss(el, 'build.wrong'); }
     });
 
-    function tryPlace(b, g) {
-      if (!fits(b, g)) { unpick(); miss(b, 'build.wrong'); return false; }
+    function place(el, g) {
       unpick();
-      b.style.transform = '';
-      b.classList.remove('return');
-      b.classList.add('placed');
-      b.dataset.locked = '1';
-      b.style.setProperty('--x', g.dataset.x);
-      b.style.setProperty('--y', g.dataset.y);
-      b.style.zIndex = 2 + Number(g.dataset.y);
+      const i = Number(g.dataset.i), p = model.parts[i];
+      el.style.transform = '';
+      el.classList.remove('return', 'lift');
+      el.dataset.locked = '1';
+      el.innerHTML = partSVG(p, { studs: studsFor(model.parts, i) });
+      el.style.setProperty('--x', p[1]);
+      el.style.setProperty('--y', p[2]);
+      el.style.zIndex = 10 + i;
       g.dataset.filled = '1'; g.classList.add('filled');
-      build.append(b);
-      sfx('click'); burstAt(b, 8);
-      left--;
-      if (left === 0) finish();
+      build.append(el);
+      sfx('click'); burstAt(el, 8);
+      if (--left === 0) finish();
       return true;
     }
     function finish() {
@@ -1163,20 +1282,30 @@
     run.root.append(wrap);
     const fit = () => {
       const W = Math.min(screenEl.clientWidth, 760) - 24;
-      const H = screenEl.clientHeight - bub.offsetHeight - 80;
-      const widths = model.bricks.map((b) => b[2]);
-      let cell = 76;
-      for (; cell > 30; cell -= 2) {
-        const bh = cell * 0.9, stud = cell * 0.2;
+      const H = screenEl.clientHeight - bub.offsetHeight - 70;
+      // Waiting pieces wrap onto lines; draw them as large as the space allows (full size down to 55%).
+      const trayHeight = (cell, ts) => {
+        const lines = [];
+        let x = 0, lineH = 0;
+        for (const p of model.parts) {
+          const pw = p[3] * cell * ts + 18;
+          if (x + pw > W && x > 0) { lines.push(lineH); x = 0; lineH = 0; }
+          x += pw; lineH = Math.max(lineH, p[4] * cell * ts);
+        }
+        lines.push(lineH);
+        return lines.reduce((sum, l) => sum + l + 22, 0);
+      };
+      let cell = 64, ts = 0.55;
+      search: for (; cell > 26; cell -= 2) {
         if ((COLS + 0.8) * cell > W) continue;
-        let lines = 1, x = 0;
-        for (const w of widths) { const bw = w * cell + 14; if (x + bw > W) { lines++; x = 0; } x += bw; }
-        if (rows * bh + cell * 0.45 + lines * (bh + stud + 14) + 30 <= H) break;
+        for (const t of [1, 0.85, 0.7, 0.55]) {
+          if (rows * cell + cell * 0.4 + trayHeight(cell, t) + 30 <= H) { ts = t; break search; }
+        }
       }
       wrap.style.setProperty('--cell', `${cell}px`);
-      wrap.style.setProperty('--bh', `${cell * 0.9}px`);
-      wrap.style.setProperty('--stud', `${cell * 0.2}px`);
-      wrap.style.setProperty('--base-h', `${cell * 0.45}px`);
+      wrap.style.setProperty('--ts', ts);
+      wrap.style.setProperty('--stud', `${cell * 0.24}px`);
+      wrap.style.setProperty('--base-h', `${cell * 0.4}px`);
     };
     fit();
     addEventListener('resize', fit);
@@ -1185,7 +1314,7 @@
 
   // ---------- home ----------
   const GAMES = [
-    { id: 'builder', name: 'Brick Builder', chip: 'Building', c1: '#3DE0A0', c2: '#12A865', d: '#0B7A48', theme: 't-builder', goal: 1, celebrateAfter: 3400, round: buildRound, stickers: ['🚀', '🏠', '🚗', '🌷', '⛵', '🏰'], featured: true },
+    { id: 'builder', name: 'Brick Builder', chip: 'Building', c1: '#3DE0A0', c2: '#12A865', d: '#0B7A48', theme: 't-builder', goal: 1, celebrateAfter: 3400, round: buildRound, stickers: ['🚀', '🏠', '🚗', '🌷', '⛵', '🏰', '🍦', '🚒'], featured: true },
     { id: 'colours', name: 'Unicorn Colours', chip: 'Colours', icon: '🦄', c1: '#FF8FC6', c2: '#FF3D8B', d: '#C71F66', theme: 't-colours', goal: 5, round: colourRound, stickers: ['🦄', '🌈', '🎈', '💖', '🍭'] },
     { id: 'count', name: 'Puppy Counting', chip: 'Numbers', icon: '🐶', c1: '#5EC1FF', c2: '#2E7BFF', d: '#1B55C9', theme: 't-count', goal: 5, round: countRound, stickers: ['🐶', '🦴', '🚒', '🐾', '🚓'] },
     { id: 'pirate', name: 'Pirate Treasure', chip: 'Sorting', icon: '🏴‍☠️', c1: '#3FE0C4', c2: '#0FA3A3', d: '#087474', theme: 't-pirate', goal: 1, round: sortRound, stickers: ['🦜', '💰', '⚓', '🐙', '🏝️'] },
@@ -1208,7 +1337,7 @@
     GAMES.forEach((g) => {
       const t = h('button', { class: 'tile' + (g.featured ? ' featured' : ''), type: 'button', style: `--c1:${g.c1};--c2:${g.c2};--d:${g.d}` });
       if (g.featured) {
-        const art = h('div', { class: 'mini-stack' }, brickEl(2, 'yellow'), brickEl(3, 'pink'), brickEl(4, 'blue'));
+        const art = modelArt(MODELS.find((m) => m.id === 'car'));
         t.append(h('div', { class: 'copy' }, h('span', { class: 'new' }, 'NEW'), h('span', { class: 'label' }, g.name), h('span', { class: 'chip' }, g.chip)), art);
       } else {
         t.append(h('span', { class: 'chip' }, g.chip), h('span', { class: 'icon emoji' }, g.icon), h('span', { class: 'label' }, g.name));
