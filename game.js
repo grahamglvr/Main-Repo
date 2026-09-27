@@ -1,4 +1,4 @@
-// Blockstead: a small 2D crafting and building game.
+// Hawd Yer Weesht, It's the Apocalypse: a 2D survival, crafting and building game set in 2210.
 // World is a grid of tiles; the player mines blocks, crafts items and builds.
 (() => {
   'use strict';
@@ -76,7 +76,7 @@
   def(B.CHEST, { name: 'Supply Chest', solid: false, hard: 1, pref: 'axe', cost: 1, sky: true });
   def(B.SCRAP, { name: 'Scrap Metal', hard: 1.6, tier: 1, pref: 'pick', drop: 'scrap' });
   def(B.ASH, { name: 'Ash', hard: 0.4, drop: 'dirt' });
-  def(B.CAMPFIRE, { name: 'Campfire', solid: false, hard: 0.8, pref: 'axe', drop: 'campfire', light: 13, cost: 1, sky: true });
+  def(B.CAMPFIRE, { name: 'Wee Fire', solid: false, hard: 0.8, pref: 'axe', drop: 'campfire', light: 13, cost: 1, sky: true });
 
   // ---------- Items ----------
   // cat: Equipment, Health, Resources or Building.
@@ -89,7 +89,7 @@
     sand: { name: 'Sand', block: B.SAND },
     bench: { name: 'Workbench', block: B.BENCH },
     furnace: { name: 'Furnace', block: B.FURNACE },
-    campfire: { name: 'Campfire', block: B.CAMPFIRE },
+    campfire: { name: 'Wee Fire', block: B.CAMPFIRE },
     brick: { name: 'Stone Bricks', block: B.BRICK },
     glass: { name: 'Glass', block: B.GLASS },
     torch: { name: 'Torch', block: B.TORCH },
@@ -104,9 +104,9 @@
     string: { name: 'String', cat: 'Resources' },
     rope: { name: 'Rope', cat: 'Resources' },
     raw_meat: { name: 'Raw Meat', food: 10, sick: 5, cat: 'Resources' },
-    berries: { name: 'Berries', heal: 10, food: 15, cat: 'Health' },
-    cooked_meat: { name: 'Cooked Meat', heal: 25, food: 40, cat: 'Health' },
-    bandage: { name: 'Bandage', heal: 30, cat: 'Health' },
+    berries: { name: 'Wee Berries', heal: 10, food: 15, cat: 'Health' },
+    cooked_meat: { name: 'Rat Piece', heal: 25, food: 40, cat: 'Health' },
+    bandage: { name: 'Big Plaster', heal: 30, cat: 'Health' },
     wood_pick: { name: 'Wooden Pickaxe', tool: 'pick', tier: 1, speed: 2.5 },
     stone_pick: { name: 'Stone Pickaxe', tool: 'pick', tier: 2, speed: 4.5 },
     iron_pick: { name: 'Iron Pickaxe', tool: 'pick', tier: 3, speed: 7 },
@@ -118,7 +118,7 @@
     iron_dagger: { name: 'Iron Dagger', melee: 18 },
     wood_bow: { name: 'Shortbow', bow: 16, bonus: 0 },
     oak_bow: { name: 'Oak Shortbow', bow: 20, bonus: 4 },
-    iron_bow: { name: 'Iron-bound Bow', bow: 24, bonus: 8 },
+    iron_bow: { name: 'The Persuader', bow: 24, bonus: 8 },
     wood_arrow: { name: 'Wooden Arrows', arrow: 6, tip: '#b0844c' },
     stone_arrow: { name: 'Stone Arrows', arrow: 10, tip: '#8b8d93' },
     iron_arrow: { name: 'Iron Arrows', arrow: 15, tip: '#e1e3e8' },
@@ -842,6 +842,7 @@
     for (const [id, n] of Object.entries(r.needs)) removeItem(id, n);
     addItem(r.out, r.n);
     sfx.craft();
+    if (ITEM[r.out].tool || ITEM[r.out].melee || ITEM[r.out].bow) say('craftTool', { chance: 0.5, cooldown: 30 });
     toast(`Crafted ${r.n > 1 ? r.n + ' × ' : ''}${ITEM[r.out].name}`);
   }
 
@@ -858,8 +859,8 @@
     ['cobble', 'Select the pickaxe and dig down into stone.'],
     ['stone_axe', 'Craft a Stone Hatchet. It cuts through tough oak trees.'],
     ['stone_pick', 'Craft a Stone Pickaxe at the Workbench.'],
-    ['kill', 'Fight off a mutant. Hit it with a dagger or shoot it with a bow.'],
-    ['cooked_meat', 'Build a Campfire from logs and sticks, and cook raw meat on it.'],
+    ['kill', 'Fight off a mutant, like a Big Minger. Hit it with a dagger or shoot it with a bow.'],
+    ['cooked_meat', 'Build a Wee Fire from logs and sticks, and cook raw meat on it into a Rat Piece.'],
     ['coal', 'Find coal ore (black specks) and make Torches.'],
     ['furnace', 'Craft a Furnace from 8 Cobblestone.'],
     ['iron_ingot', 'Smelt an Iron Ingot from iron ore or 3 scrap metal at a Furnace.'],
@@ -893,8 +894,34 @@
         for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       }
       if (ac.state === 'suspended') ac.resume();
+      if (!amb) startAmbience();
     }
     const ready = () => on && ac && ac.state === 'running';
+
+    // Looping weather sound: steady rain, or a low wind for the ash cloud. Fades in and out.
+    let amb = null, ambKind = 'clear';
+    function startAmbience() {
+      if (amb) {
+        const t = ac.currentTime;
+        amb.g.gain.cancelScheduledValues(t);
+        amb.g.gain.setValueAtTime(amb.g.gain.value, t);
+        amb.g.gain.linearRampToValueAtTime(0, t + 2);
+        amb.src.stop(t + 2.1);
+        amb = null;
+      }
+      if (!on || !ac || (ambKind !== 'rain' && ambKind !== 'ash')) return;
+      const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+      src.buffer = noiseBuf; src.loop = true;
+      const rain = ambKind === 'rain';
+      f.type = rain ? 'bandpass' : 'lowpass';
+      f.frequency.value = rain ? 1400 : 380;
+      f.Q.value = rain ? 0.4 : 0.7;
+      g.gain.setValueAtTime(0, ac.currentTime);
+      g.gain.linearRampToValueAtTime(rain ? 0.09 : 0.14, ac.currentTime + 3);
+      src.connect(f); f.connect(g); g.connect(master);
+      src.start();
+      amb = { src, g };
+    }
 
     function env(gain, dur, delay) {
       const g = ac.createGain(), t = ac.currentTime + delay;
@@ -947,8 +974,10 @@
         on = !on;
         try { localStorage.setItem(SOUND_KEY, on ? 'on' : 'off'); } catch { /* not saved */ }
         if (on) unlock();
+        if (ac) startAmbience();
         return on;
       },
+      ambience(kind) { ambKind = kind; if (ac) startAmbience(); },
       hit: m => play(HIT[m] || HIT.dirt),
       break: m => play(BREAK[m] || BREAK.dirt),
       place: () => play(v => { noise({ type: 'lowpass', freq: 450 * v, dur: 0.07, gain: 0.45 }); tone({ freq: 130 * v, to: 80, dur: 0.08, gain: 0.3 }); }),
@@ -963,6 +992,7 @@
       hitEnemy: () => play(v => { noise({ type: 'lowpass', freq: 700 * v, dur: 0.08, gain: 0.5 }); tone({ freq: 160 * v, to: 90, dur: 0.08, type: 'square', gain: 0.06 }); }),
       enemyDie: () => play(v => { tone({ freq: 420 * v, to: 90, dur: 0.3, type: 'sawtooth', gain: 0.1 }); noise({ type: 'lowpass', freq: 600, dur: 0.2, gain: 0.3 }); }),
       bow: () => play(v => { tone({ freq: 190 * v, to: 110, dur: 0.12, type: 'triangle', gain: 0.3 }); noise({ type: 'highpass', freq: 2500, dur: 0.07, gain: 0.12 }); }),
+      radio: () => play(() => { noise({ type: 'bandpass', freq: 2400, q: 0.7, dur: 0.18, gain: 0.12 }); tone({ freq: 1200, dur: 0.05, type: 'square', gain: 0.02, delay: 0.2 }); }),
       denied: () => play(() => tone({ freq: 160, to: 120, dur: 0.14, type: 'square', gain: 0.05 })),
       click: () => play(() => tone({ freq: 900, dur: 0.03, type: 'square', gain: 0.03 })),
     };
@@ -1149,6 +1179,7 @@
     progress.chest = true;
     sfx.chest();
     toast(`Supply chest: ${found.join(', ')}`, 4000);
+    say('chest', { force: true });
   }
   function openChest(tx, ty) {
     tiles[idx(tx, ty)] = B.AIR;
@@ -1170,11 +1201,12 @@
     player.hp = Math.min(MAX_HP, player.hp + n);
     uiDirty = true;
   }
-  function hurt(n) {
+  function hurt(n, cause = 'hurt') {
     player.hp = Math.max(0, player.hp - n);
     hurtFlash = 0.35;
     sfx.hurt();
     uiDirty = true;
+    if (player.hp > 0) say(cause, { cooldown: 6 });
     if (player.hp === 0) {
       spawn();
       player.hp = MAX_HP;
@@ -1184,8 +1216,66 @@
       iframes = 2;
       snapCamera();
       toast('You passed out and woke up back at the start. You kept your items.');
+      say('respawn', { force: true });
     }
   }
+  // ---------- Tam's patter and Wee Davie's radio ----------
+  // Tam talks in speech bubbles when things happen. Wee Davie, holed up in another bunker,
+  // radios in with weather warnings. Game instructions stay in plain English elsewhere.
+  const LINES = {
+    start: ['Right. Mon then. How bad can it be?', "Aw… it's bad. It's pure bad.", "Fresh air! …Naw, that's no fresh."],
+    hurt: ["Ya wee… that's sore!", 'Ow! Watch it, pal!', 'Aw ma heid!', "That's gonnae leave a mark."],
+    fall: ['Ma knees! Ma good knees!', "Ah'm too auld fur this."],
+    ashHurt: ['*cough* *cough*', "That ash is pure mingin'.", "Ma lungs are goin'!"],
+    hungry: ["Ah'm pure starvin'. Ah'd eat a scabby rat.", "Ma belly thinks ma throat's been cut."],
+    starving: ["Ah'm wastin' away here!", 'Need scran. NOW.'],
+    eatRat: ['No bad, actually.', 'Tastes like chicken. Radioactive chicken.', 'Ya dancer, a rat piece!'],
+    raw: ["Aw that's boggin'. Ah'm gonnae boak.", "Should've cooked that. Definitely should've cooked that."],
+    berries: ['Wee berries. Pure wee.', "Hope these urnae the poisonous wans."],
+    bandage: ['Big plaster. Sorted.'],
+    chest: ['Ya dancer!', 'Get in!', 'Christmas has come early!', "Whit's in the box? WHIT'S IN THE BOX?"],
+    tired: ["Gie's a minute… ah'm knackered.", "Ah'm puggled.", 'Need a wee sit doon.'],
+    crawler: ["Whit in the name o'… GONNAE NO!", 'Aw naw. A Peely-Wally.', 'Get a torch, get a torch, GET A TORCH!'],
+    ghoul: ["Awright big man? …Naw, he's no awright.", "Here, whit's your problem, bawheid?"],
+    rat: ["That's a big minger.", "See the size o' that rat!"],
+    kill: ['Aye, an\' stay doon!', 'Ya beauty!', "Mess wi' the best…"],
+    oak: ['This is taking a lifetime, man.', 'Need a better hatchet fur this.'],
+    ash: ["Ah cannae see a thing!", 'Get indoors, ya numpty!'],
+    rain: ['Heavy dreich. Typical.', "It's stoatin' doon!", 'Aye, summer in Glesga.'],
+    fireOut: ["Aw naw, the fire's oot!", "Ma fire! Rain's put it oot!"],
+    heat: ['Taps aff!', "Pure roastin'!", "It's like Magaluf oot here."],
+    respawn: ["Whit happened? Ah feel like ah've been hit by a bus.", "Ah'm back. Nae thanks tae you."],
+    craftTool: ['Look at that. Pure craftsmanship.', "Ah'm basically an engineer noo."],
+  };
+  const RADIO = {
+    hello: ["Tam, is that you? It's Wee Davie in the other bunker. Keep yer radio on, ah'll tell ye when the weather's turnin'."],
+    ashWarn: ["Big man, see that ash comin'? Get under a roof or get doon a hole!", "Ash cloud headin' your way. Ah'm stayin' in, you're on yer own, pal."],
+    rainWarn: ["Heavy dreich on the way. Get yer fires under cover or they're goin' oot.", "Rain's comin'. The bushes'll love it. You'll no."],
+    heatWarn: ["Heatwave comin'. Taps aff, big man. Keep yer scran handy, ye'll be starvin'.", 'Scorcher on the way. Stay in the shade.'],
+    clear: ["That's it passed. Oot ye go.", "Weather's cleared. Gaun yersel', big man."],
+  };
+  const pick = list => list[Math.floor(Math.random() * list.length)];
+  const speech = { text: '', t: 0 }, sayNext = {};
+  let sayGap = 0;
+  function say(kind, { force = false, cooldown = 10, chance = 1 } = {}) {
+    const now = performance.now() / 1000;
+    if (!force && (sayGap > 0 || (sayNext[kind] || 0) > now || Math.random() > chance)) return;
+    speech.text = pick(LINES[kind]);
+    speech.t = 3.5;
+    sayGap = 2.5;
+    sayNext[kind] = now + cooldown;
+  }
+  let radioTimer = 0;
+  function radio(kind) {
+    const el = document.getElementById('radio');
+    document.getElementById('radio-text').textContent = pick(RADIO[kind]);
+    el.hidden = false;
+    el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
+    sfx.radio();
+    clearTimeout(radioTimer);
+    radioTimer = setTimeout(() => { el.hidden = true; }, 8000);
+  }
+
   // Food and medicine: `heal` restores health, `food` fills hunger, `sick` hurts (raw meat).
   function eat(it) {
     const f = ITEM[it.id];
@@ -1197,7 +1287,10 @@
     if (f.heal) { heal(f.heal); parts.push(`+${f.heal} health`); }
     if (f.food) { player.food = Math.min(MAX_FOOD, player.food + f.food); parts.push(`+${f.food} food`); }
     toast(parts.join(', '));
-    if (f.sick) { hurt(f.sick); toast(`Raw meat made you sick. Cook it on a Campfire first. (${parts.join(', ')})`); }
+    if (f.sick) { hurt(f.sick, 'raw'); toast(`Raw meat made you sick. Cook it on a Wee Fire first. (${parts.join(', ')})`); say('raw', { force: true }); }
+    else if (it.id === 'cooked_meat') say('eatRat', { force: true });
+    else if (it.id === 'bandage') say('bandage', { force: true });
+    else say('berries', { chance: 0.3 });
   }
 
   // ---------- Hunger ----------
@@ -1205,22 +1298,133 @@
   const MAX_FOOD = 100, FOOD_DRAIN = MAX_FOOD / (20 * 60), STARVE_EVERY = 4, STARVE_DMG = 2;
   let starveT = 0, hungerWarned = false;
   function updateHunger(dt) {
-    player.food = Math.max(0, player.food - FOOD_DRAIN * dt);
-    if (player.food < 20 && !hungerWarned) { toast("You're getting hungry. Eat berries or cooked meat."); hungerWarned = true; }
+    player.food = Math.max(0, player.food - FOOD_DRAIN * dt * (heatOn() ? 2.5 : 1));
+    if (player.food < 20 && !hungerWarned) { toast("You're getting hungry. Eat berries or a Rat Piece."); say('hungry', { force: true }); hungerWarned = true; }
     if (player.food >= 30) hungerWarned = false;
     if (player.food <= 0) {
       starveT -= dt;
-      if (starveT <= 0) { starveT = STARVE_EVERY; hurt(STARVE_DMG); toast("You're starving. Eat something."); }
+      if (starveT <= 0) { starveT = STARVE_EVERY; hurt(STARVE_DMG, 'starving'); toast("You're starving. Eat something."); }
     } else starveT = STARVE_EVERY;
+  }
+
+  // ---------- Weather ----------
+  // Clear spells alternate with a spell of weather. Wee Davie radios a warning before it turns.
+  // Ash Cloud: thick fog, and the ash hurts you outside. Crawlers can surface in the gloom.
+  // Heavy Dreich: rain regrows bushes and trees but puts out torches and fires left in the open.
+  // Taps Aff: heatwave. Out in the sun you get hungry faster and stamina refills slower.
+  const WEATHER = {
+    clear: { name: 'Clear' },
+    ash: { name: 'Ash Cloud', warn: 'ashWarn',
+      info: 'Ash Cloud: you can barely see, and the ash hurts you outside. Get under a roof or underground.' },
+    rain: { name: 'Heavy Dreich', warn: 'rainWarn',
+      info: 'Heavy Dreich: rain regrows bushes and trees, but puts out torches and fires left outside.' },
+    heat: { name: 'Taps Aff', warn: 'heatWarn',
+      info: 'Taps Aff: heatwave. Out in the sun you get hungry faster and your stamina refills slower.' },
+  };
+  const FIRST_WEATHER = 240, WARN_AHEAD = 25, FADE = 6;
+  const weather = { kind: 'clear', shown: 'clear', next: null, t: FIRST_WEATHER, k: 0, warned: false };
+  let outside = true, outsideT = 0, ashT = 4, growT = 3, douseT = 2;
+  const weatherOn = kind => weather.kind === kind && weather.k > 0.5;
+  const heatOn = () => weatherOn('heat') && outside;
+  function resetWeather() {
+    Object.assign(weather, { kind: 'clear', shown: 'clear', next: null, t: FIRST_WEATHER, k: 0, warned: false });
+    sfx.ambience('clear');
+  }
+  // Cover means something solid somewhere above: a roof of planks, bricks or glass counts; leaves don't.
+  function openToSky(x, y) {
+    for (let yy = y - 1; yy >= 0; yy--) if (BLOCK[get(x, yy)].solid) return false;
+    return true;
+  }
+  function pickWeather() {
+    const r = Math.random();
+    return r < 0.35 ? 'ash' : r < 0.75 ? 'rain' : 'heat';
+  }
+  function setWeather(kind) {
+    weather.kind = kind;
+    weather.next = null;
+    weather.warned = false;
+    weather.t = kind === 'clear' ? 150 + Math.random() * 150 : 90 + Math.random() * 90;
+    if (kind !== 'clear') {
+      weather.shown = kind;
+      toast(WEATHER[kind].info, 6000);
+      say(kind, { force: true });
+    }
+    sfx.ambience(kind);
+  }
+  function updateWeather(dt) {
+    weather.t -= dt;
+    if (weather.kind === 'clear') {
+      if (!weather.next) weather.next = pickWeather();
+      if (!weather.warned && weather.t <= WARN_AHEAD) { weather.warned = true; radio(WEATHER[weather.next].warn); }
+      if (weather.t <= 0) setWeather(weather.next);
+    } else if (weather.t <= 0) {
+      setWeather('clear');
+      radio('clear');
+    }
+    weather.k += Math.max(-dt / FADE, Math.min(dt / FADE, (weather.kind === 'clear' ? 0 : 1) - weather.k));
+    outsideT -= dt;
+    if (outsideT <= 0) { outsideT = 0.25; outside = openToSky(Math.floor(player.x + player.w / 2), Math.floor(player.y)); }
+    if (weatherOn('ash') && outside) {
+      ashT -= dt;
+      if (ashT <= 0) { ashT = 4; hurt(2, 'ashHurt'); }
+    } else ashT = 4;
+    if (weatherOn('rain')) {
+      if ((growT -= dt) <= 0) { growT = 3; regrow(); }
+      if ((douseT -= dt) <= 0) { douseT = 2; douseFires(); }
+    }
+  }
+  // Rain brings the wasteland back: new bushes, and now and then a young tree.
+  function regrow() {
+    let changed = false;
+    const px = Math.floor(player.x + player.w / 2);
+    for (let i = 0; i < 5; i++) {
+      const x = px + Math.floor(Math.random() * 81) - 40;
+      if (x < 3 || x >= W - 3 || Math.abs(x - px) < 2) continue;
+      let y = 0;
+      while (y < H && !BLOCK[get(x, y)].solid) y++;
+      if (get(x, y) !== B.GRASS || get(x, y - 1) !== B.AIR) continue;
+      const r = Math.random();
+      if (r < 0.35) { tiles[idx(x, y - 1)] = B.BUSH; changed = true; }
+      else if (r < 0.45 && growTree(x, y)) changed = true;
+    }
+    if (changed) computeLight();
+  }
+  function growTree(x, ground) {
+    const trunk = 4 + ((Math.random() * 2) | 0), top = ground - trunk;
+    for (let y = top - 2; y < ground; y++) for (let xx = x - 2; xx <= x + 2; xx++) if (get(xx, y) !== B.AIR) return false;
+    for (let i = 1; i <= trunk; i++) tiles[idx(x, ground - i)] = B.LOG;
+    for (let dy = -2; dy <= 1; dy++) for (let dx = -2; dx <= 2; dx++) {
+      if (Math.abs(dx) + Math.abs(dy) > 3 || (dy === 1 && Math.abs(dx) === 2)) continue;
+      if (get(x + dx, top + dy) === B.AIR) tiles[idx(x + dx, top + dy)] = B.LEAVES;
+    }
+    return true;
+  }
+  // Rain puts out torches and fires with nothing over them.
+  function douseFires() {
+    let changed = false, nearby = false;
+    for (let i = 0; i < tiles.length; i++) {
+      const b = tiles[i];
+      if (b !== B.TORCH && b !== B.CAMPFIRE) continue;
+      const x = i % W, y = (i / W) | 0;
+      if (!openToSky(x, y) || Math.random() > 0.4) continue;
+      tiles[i] = B.AIR;
+      changed = true;
+      if (Math.abs(x - player.x) < 25) nearby = true;
+    }
+    if (changed) computeLight();
+    if (nearby) {
+      say('fireOut', { force: true });
+      toast('The rain put out a fire left in the open. Build a roof over your fires.');
+    }
   }
 
   // ---------- Enemies and combat ----------
   const ENEMY = {
-    rat: { name: 'Mutant Rat', w: 0.9, h: 0.6, hp: 20, dmg: 6, speed: 2.7, jump: -9, drops: [['raw_meat', 1, 0.7]] },
-    ghoul: { name: 'Ghoul', w: 0.7, h: 1.7, hp: 45, dmg: 12, speed: 1.9, jump: -10.5,
+    rat: { name: 'Big Minger', w: 0.9, h: 0.6, hp: 20, dmg: 6, speed: 2.7, jump: -9, drops: [['raw_meat', 1, 0.7]] },
+    ghoul: { name: 'Bawheid', w: 0.7, h: 1.7, hp: 45, dmg: 12, speed: 1.9, jump: -10.5,
       drops: [['scrap', 1, 0.5], ['string', 1, 0.5], ['rope', 1, 0.15], ['raw_meat', 1, 0.3]] },
     // Pale, blind cave dwellers. They live underground and run from fire.
-    crawler: { name: 'Crawler', w: 0.8, h: 1.2, hp: 35, dmg: 10, speed: 3.0, jump: -12, fearsFire: true,
+    crawler: { name: 'Peely-Wally', w: 0.8, h: 1.2, hp: 35, dmg: 10, speed: 3.0, jump: -12, fearsFire: true,
       drops: [['raw_meat', 1, 0.4], ['string', 1, 0.4], ['rope', 1, 0.2]] },
   };
   const FIRE_RANGE = 7;
@@ -1278,7 +1482,7 @@
     if (Math.random() < (underground ? 0.2 : 0.6)) { // on the surface
       y = 0;
       while (y < H && !BLOCK[get(x, y)].solid) y++;
-      type = Math.random() < 0.7 ? 'rat' : 'ghoul';
+      type = weatherOn('ash') && Math.random() < 0.4 ? 'crawler' : Math.random() < 0.7 ? 'rat' : 'ghoul'; // crawlers surface in the ash
     } else { // in dark caves near the player's depth
       y = Math.floor(player.y) + Math.floor(Math.random() * 16 - 8);
       if (y < 1 || BLOCK[get(x, y)].solid) return;
@@ -1307,7 +1511,9 @@
       e.lookT = (e.lookT || 0) - dt;
       if (e.lookT <= 0) {
         e.lookT = 0.25 + Math.random() * 0.1;
+        const saw = e.seesPlayer;
         e.seesPlayer = Math.hypot(dx, dy) < CHASE_RANGE && clearLine(ecx, e.y + e.h * 0.3, pcx, pcy, -1, -1);
+        if (e.seesPlayer && !saw) say(e.type, { cooldown: 25, chance: e.type === 'crawler' ? 1 : 0.5 });
       }
       let dir, speed = d.speed;
       const fire = d.fearsFire ? nearestFire(ecx, ecy) : null;
@@ -1350,6 +1556,7 @@
     floaters.push({ x: ecx, y: e.y, text: `-${n}`, col: '#ffd166', t: 0.9 });
     sfx.hitEnemy();
     if (e.hp <= 0) {
+      say('kill', { chance: 0.4, cooldown: 8 });
       e.dead = true;
       sfx.enemyDie();
       progress.kill = true;
@@ -1379,6 +1586,7 @@
     if (player.st < n) {
       if (tiredToastT <= 0) {
         toast('Out of breath. Rest a moment.');
+        say('tired', { cooldown: 8 });
         tiredToastT = 3;
         staminaEl.classList.remove('empty'); void staminaEl.offsetWidth; staminaEl.classList.add('empty');
       }
@@ -1391,7 +1599,7 @@
   function updateStamina(dt) {
     staminaWait -= dt;
     tiredToastT -= dt;
-    if (staminaWait <= 0) player.st = Math.min(MAX_ST, player.st + ST_REGEN * dt);
+    if (staminaWait <= 0) player.st = Math.min(MAX_ST, player.st + ST_REGEN * dt * (heatOn() ? 0.5 : 1));
   }
 
   function melee(e) {
@@ -1477,7 +1685,7 @@
     }
     if (player.onGround && !wasGround && fallSpeed > 13) {
       sfx.land();
-      if (fallSpeed > 16.5) hurt(Math.round((fallSpeed - 16.5) * 5));
+      if (fallSpeed > 16.5) hurt(Math.round((fallSpeed - 16.5) * 5), 'fall');
     }
     hurtFlash = Math.max(0, hurtFlash - dt);
     if (player.onGround && dir) {
@@ -1558,9 +1766,13 @@
 
     updateStamina(dt);
     updateHunger(dt);
+    speech.t -= dt;
+    sayGap -= dt;
+    updateWeather(dt);
     updateEnemies(dt);
     updateArrows(dt);
     updateAsh(dt);
+    updateDrops(dt);
 
     // Camera eases toward the player.
     const tx = (player.x + player.w / 2) * TILE - viewW / 2;
@@ -1576,6 +1788,7 @@
   }
 
   // ---------- Rendering ----------
+  const SKY_TINT = { ash: ['70,62,55', 0.8], rain: ['48,58,70', 0.65], heat: ['255,150,60', 0.2] };
   function drawSky() {
     // Smoggy wasteland sky
     const g = ctx.createLinearGradient(0, 0, 0, viewH);
@@ -1584,6 +1797,11 @@
     g.addColorStop(1, '#e2b97c');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, viewW, viewH);
+    const tint = SKY_TINT[weather.shown];
+    if (tint && weather.k > 0) {
+      ctx.fillStyle = `rgba(${tint[0]},${(tint[1] * weather.k).toFixed(3)})`;
+      ctx.fillRect(0, 0, viewW, viewH);
+    }
     // Pale sun behind the haze
     const sx = viewW * 0.72 - camera.x * 0.02, sy = viewH * 0.28;
     const sun = ctx.createRadialGradient(sx, sy, 4, sx, sy, 90);
@@ -1727,6 +1945,7 @@
 
     drawShade(x0, y0, x1, y1, cx, cy);
     drawFireGlow(x0, y0, x1, y1, cx, cy);
+    drawWeather();
 
     // Target highlight and cracks
     if (mouse.over && !invOpen()) {
@@ -1829,6 +2048,76 @@
         ctx.fillRect(fx, by + 22 - fh, 4, fh);
         ctx.fillStyle = '#fff3b0';
         ctx.fillRect(fx + 1, by + 22 - fh * 0.5, 2, fh * 0.4);
+      }
+    }
+  }
+
+  // Weather particles: rain streaks, heavy ash, or rising heat motes. Screen space, so they cost little.
+  const drops = Array.from({ length: 170 }, () => ({ x: Math.random(), y: Math.random(), s: Math.random() }));
+  function updateDrops(dt) {
+    if (weather.k <= 0) return;
+    const t = performance.now() / 700;
+    for (const d of drops) {
+      if (weather.shown === 'rain') { d.y += (1.3 + d.s) * dt; d.x += 0.1 * dt; }
+      else if (weather.shown === 'ash') { d.y += (0.08 + d.s * 0.12) * dt; d.x += (0.05 + d.s * 0.05) * dt + Math.sin(t + d.s * 20) * 0.0008; }
+      else { d.y -= (0.03 + d.s * 0.04) * dt; d.x += Math.sin(t + d.s * 20) * 0.0005; }
+      if (d.y > 1) { d.y -= 1; d.x = Math.random(); }
+      if (d.y < 0) { d.y += 1; d.x = Math.random(); }
+      if (d.x > 1) d.x -= 1;
+    }
+  }
+  function fog(x, y, r0, r1, rgb, a) {
+    const g = ctx.createRadialGradient(x, y, r0 * TILE, x, y, r1 * TILE);
+    g.addColorStop(0, `rgba(${rgb},0)`);
+    g.addColorStop(1, `rgba(${rgb},${a.toFixed(3)})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, viewW, viewH);
+  }
+  function drawWeather() {
+    const k = weather.k;
+    if (k <= 0) return;
+    const px = (player.x + player.w / 2) * TILE - camera.x, py = (player.y + player.h / 2) * TILE - camera.y;
+    const col = Math.max(0, Math.min(W - 1, Math.floor(player.x + player.w / 2)));
+    const deep = player.y > surface[col] + 3;
+    const vis = deep ? 0.25 : outside ? 1 : 0.6; // less of the weather gets into caves and under roofs
+    const kind = weather.shown;
+    if (kind === 'ash') {
+      fog(px, py, 3.5, 9.5, '58,52,46', 0.96 * k * vis);
+      if (!deep) for (const d of drops) {
+        ctx.fillStyle = `rgba(190,182,170,${((0.3 + d.s * 0.4) * k).toFixed(3)})`;
+        ctx.fillRect(Math.round(d.x * viewW), Math.round(d.y * viewH), d.s > 0.6 ? 3 : 2, d.s > 0.6 ? 3 : 2);
+      }
+    } else if (kind === 'rain') {
+      ctx.fillStyle = `rgba(28,38,52,${(0.22 * k * vis).toFixed(3)})`;
+      ctx.fillRect(0, 0, viewW, viewH);
+      fog(px, py, 6, 14, '60,72,86', 0.6 * k * vis);
+      if (!deep) {
+        ctx.strokeStyle = `rgba(175,195,215,${(0.45 * k).toFixed(3)})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (const d of drops) {
+          const x = d.x * viewW, y = d.y * viewH, len = 10 + d.s * 10;
+          ctx.moveTo(x, y); ctx.lineTo(x + len * 0.12, y + len);
+        }
+        ctx.stroke();
+      }
+    } else if (kind === 'heat') {
+      ctx.fillStyle = `rgba(255,140,50,${(0.1 * k).toFixed(3)})`;
+      ctx.fillRect(0, 0, viewW, viewH);
+      if (outside && !deep) {
+        // Heat haze: redraw the screen in thin strips, each nudged sideways by a slow wave.
+        const t = performance.now() / 1000, strip = 6 * dpr;
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        for (let y = 0; y < canvas.height; y += strip) {
+          const off = Math.sin(y / (40 * dpr) + t * 3) * 1.6 * dpr * k;
+          ctx.drawImage(canvas, 0, y, canvas.width, strip, off, y, canvas.width, strip);
+        }
+        ctx.restore();
+        for (const d of drops) {
+          ctx.fillStyle = `rgba(255,220,170,${(0.12 + d.s * 0.18) * k})`;
+          ctx.fillRect(Math.round(d.x * viewW), Math.round(d.y * viewH), 2, 2);
+        }
       }
     }
   }
@@ -2031,6 +2320,7 @@
     const bob = idle ? Math.round((Math.sin(now / 600) + 1) / 2) : 0; // breathing
     const blink = now % 3600 < 130;
     const armRot = -0.3 + (mining.t > 0 ? Math.sin(now / 60) * 0.6 : player.swing > 0 ? -1.2 + player.swing * 8 : 0) - swing * 0.03;
+    const tapsAff = heatOn(); // heatwave in the open: overalls rolled down to the waist
     drawSprite(px + w / 2, py, player.face, 0, g => {
       const SKIN = '#f0c6a0', SKIN_SH = '#d9a57e', SKIN_DK = '#c08a64', SKIN_HI = '#fbe0c6';
       // Bunker-issue work gear: orange bib overalls with grey straps and panels over a grey shirt
@@ -2042,7 +2332,7 @@
       g.translate(-3, 20 + bob);
       g.rotate(0.25 + swing * 0.06);
       R(g, SKIN_SH, -2, 5, 5, 9); R(g, SKIN_DK, -2, 12, 5, 3);
-      R(g, GREY_SH, -2, 0, 5, 5);                           // short grey sleeve
+      if (!tapsAff) R(g, GREY_SH, -2, 0, 5, 5);             // short grey sleeve
       g.restore();
       // legs: back leg darker
       const legs = [[1 - swing * 0.5, true], [-7 + swing * 0.5, false]];
@@ -2056,6 +2346,17 @@
         R(g, '#34343c', lx + 2, h - 5, 4, 1);              // laces
         R(g, '#e8e8e8', lx, h - 1, 9, 1);                  // white sole
       }
+      if (tapsAff) {
+        // taps aff: bare chest and a wee belly, overalls rolled down and tied at the waist
+        R(g, SKIN, -8, 17 + bob, 16, h - 38 - bob);
+        R(g, SKIN_SH, -8, 17 + bob, 2, h - 38 - bob);
+        R(g, SKIN_HI, 3, 19 + bob, 3, 3);
+        R(g, SKIN_SH, 0, 22 + bob, 5, 1);                   // chest line
+        R(g, SKIN, 6, h - 27, 3, 5); R(g, SKIN_SH, 7, h - 23, 2, 1); // belly
+        R(g, '#b5561f', 2, 25 + bob, 1, 1); R(g, '#b5561f', 4, 26 + bob, 1, 1); // ginger chest hair
+        R(g, OR, -8, h - 22, 16, 3); R(g, OR_SH, -8, h - 20, 16, 1);
+        R(g, OR_DK, 5, h - 22, 3, 6);                       // tied sleeve hanging down
+      } else {
       // torso: grey shirt, orange bib, grey straps with buttons, and a grey chest pocket
       R(g, GREY, -8, 17 + bob, 16, 6);
       R(g, GREY_SH, -8, 17 + bob, 2, 6);
@@ -2068,6 +2369,7 @@
       R(g, GREY, -2, 23 + bob, 6, 5); R(g, GREY_DK, -2, 23 + bob, 6, 1); // pocket
       R(g, OR_DK, -8, h - 21, 16, 1);                       // waist seam
       R(g, SKIN_SH, -1, 17 + bob, 3, 1);                    // collar opening
+      }
       // neck
       R(g, SKIN_SH, -2, 15 + bob, 6, 3);
       // head: bald and round, lit from the front
@@ -2091,7 +2393,8 @@
       g.translate(0, 20 + bob);
       g.rotate(armRot);
       R(g, SKIN, -2, 5, 5, 11); R(g, SKIN_SH, -2, 5, 1, 11); R(g, SKIN_HI, 2, 6, 1, 5);
-      R(g, GREY, -2, 0, 5, 5); R(g, GREY_SH, -2, 0, 1, 5); R(g, GREY_DK, -2, 5, 5, 1); // sleeve
+      if (tapsAff) { R(g, SKIN, -2, 0, 5, 5); R(g, SKIN_SH, -2, 0, 1, 5); }
+      else { R(g, GREY, -2, 0, 5, 5); R(g, GREY_SH, -2, 0, 1, 5); R(g, GREY_DK, -2, 5, 5, 1); } // sleeve
       R(g, SKIN_SH, -2, 13, 5, 3);
       const it = held();
       if (it) g.drawImage(ICON_HAND[it.id], -1, 7, 16, 16);
@@ -2112,7 +2415,24 @@
   const staminaEl = document.getElementById('stamina');
   const staminaFill = document.getElementById('stamina-fill');
   const staminaText = document.getElementById('stamina-text');
-  let shownSt = -1, shownFood = -1;
+  let shownSt = -1, shownFood = -1, shownWeather = '';
+  const weatherText = document.getElementById('weather-text'), weatherRow = document.getElementById('weather-row');
+  const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  function drawWeatherChip() {
+    let text, cls = weather.kind;
+    if (weather.kind === 'clear') {
+      text = weather.warned ? `Clear · ${WEATHER[weather.next].name} in ${Math.ceil(Math.max(0, weather.t))}s` : 'Clear';
+      if (weather.warned) cls = 'warn';
+    } else {
+      text = `${WEATHER[weather.kind].name} · ${mmss(Math.max(0, weather.t))}`;
+      if (weather.kind === 'ash' && outside) text += ' · take cover!';
+      if (weather.kind === 'heat' && outside) text += ' · in the sun';
+    }
+    if (text === shownWeather) return;
+    shownWeather = text;
+    weatherText.textContent = text;
+    weatherRow.dataset.kind = cls;
+  }
   const foodEl = document.getElementById('hunger');
   const foodFill = document.getElementById('hunger-fill');
   const foodText = document.getElementById('hunger-text');
@@ -2137,28 +2457,31 @@
 
   // Random hints beside the goal. They change every 15 seconds, or when clicked.
   const TIPS = [
-    'Hatchets chop wood fastest. Pickaxes are best on stone and ore.',
-    'Oak trees drop two logs per block, but you need a Stone Hatchet to chop them quickly.',
-    'Crawlers are terrified of fire. Hold a torch when you explore deep caves.',
-    'Place a Campfire near your base. It cooks meat and keeps crawlers away.',
-    'Supply chests usually hold the next tier of gear up from what you carry.',
-    'Walking is free, but jumping, swinging and fighting use stamina.',
-    'Out of breath? Stop for a moment and your stamina refills.',
-    'Hunger drains slowly. Cooked meat fills you up far more than berries.',
-    'Raw meat fills you a little but makes you sick. Cook it first.',
-    'Break bushes and leaves for fibre. Each piece might come with berries.',
-    'Two fibre make a string. Two string make a rope.',
-    'Scrap metal from the ruins can be smelted into iron: 3 scrap and 1 coal at a Furnace.',
-    'Bandages heal 30 health and only need string and fibre.',
-    'Cooked meat heals 25. Rats drop raw meat.',
-    'Creatures only chase you when they can see you. Break line of sight to lose them.',
-    'Falling more than 4 blocks hurts. Build ladders to get down safely.',
-    'Bows shoot your best arrows first. Iron arrows hit hardest.',
-    'Keep a torch in your hotbar for dark caves.',
-    'Iron ore is deep underground and needs a stone tool or better.',
-    'Recipes you can make right now are listed first in the crafting menu.',
-    'Press E to open your inventory and crafting.',
-    'Ruins often hide a supply chest inside their broken walls.',
+    'Hatchets chop wood fastest. Pickaxes are best on stone and ore. Use the right tool, ya numpty.',
+    'Oak drops two logs a block, but ye need a Stone Hatchet or ye\'ll be there aw day.',
+    "Peely-Wallies are feart o' fire. Carry a torch doon the caves. Carry three.",
+    'Build a Wee Fire near yer base. It cooks yer scran an\' keeps the Peely-Wallies away.',
+    'Supply chests usually hold the next tier o\' gear up fae whit ye\'ve got.',
+    "Walkin' is free. Jumpin', swingin' an' fightin' use stamina.",
+    "Knackered? Staun still a wee minute an' yer stamina comes back.",
+    'Break bushes an\' leaves for fibre. Sometimes ye get Wee Berries as a bonus.',
+    'Two fibre make a string. Two string make a rope. Simple as.',
+    'Scrap metal fae the ruins melts doon intae iron: 3 scrap an\' 1 coal at a Furnace.',
+    'A Big Plaster heals 30. Just string an\' fibre. Nae excuses.',
+    'A Rat Piece heals 25 an\' fills ye up. Cook the rat first, trust me.',
+    "Raw meat fills ye a wee bit but ye'll be boakin'. Cook it on a Wee Fire.",
+    "Hunger goes doon slow. Rat Pieces fill ye up way mair than berries.",
+    "Mutants only chase ye if they can see ye. Duck behind a wall an' they lose interest.",
+    'Fallin\' mair than 4 blocks is sore. Build ladders like a sensible person.',
+    "Bows fire yer best arrows first. Iron arrows hit the hardest.",
+    'Ash Cloud? Get under a roof or doon a hole. That stuff\'s murder on yer lungs.',
+    "Heavy Dreich puts oot fires left in the open. Build a roof over them.",
+    'Heavy Dreich grows bushes an\' trees back. Every cloud, eh?',
+    "Taps Aff heatwave: stay in the shade or ye'll be starvin' an' puggled.",
+    'Wee Davie radios in before the weather turns. Listen tae the man.',
+    'Iron ore is deep doon an\' needs a stone tool or better.',
+    'Ruins often hide a supply chest behind the broken walls.',
+    'Press E for yer inventory an\' crafting.',
   ];
   const tipLine = document.getElementById('tip-line');
   let tipIndex = Math.floor(Math.random() * TIPS.length), tipTimer = 0;
@@ -2323,6 +2646,7 @@
   }
 
   function showOakTip() {
+    say('oak', { force: true });
     tipCooldown = 45;
     const axe = heldTool() && heldTool().tool === 'axe';
     document.getElementById('tip-text').textContent = axe
@@ -2413,7 +2737,8 @@
   }
   const keycap = k => `<kbd>${k}</kbd>`;
   const promptHTML = list => list.map(([keys, label]) => `<span class="pr">${[].concat(keys).filter(Boolean).map(keycap).join('')}<span>${label}</span></span>`).join('');
-  let lastPrompt = '', lastCoach = '';
+  let lastPrompt = '', lastCoach = '', lastSpeech = '';
+  const speechEl = document.getElementById('speech');
 
   function cursorPrompts() {
     const list = [];
@@ -2430,7 +2755,7 @@
         else list.push(['Left click', `${BLOCK[b].pref === 'axe' ? 'Chop' : 'Mine'} ${BLOCK[b].name}`]);
       } else if (b === B.AIR && it && it.block && hasSupport(t.tx, t.ty)) list.push(['Right click', `Place ${it.name}`]);
     }
-    if (it && (it.heal || it.food)) list.push(['Right click', it.id === 'bandage' ? 'Use bandage' : `Eat ${it.name}`]);
+    if (it && (it.heal || it.food)) list.push(['Right click', it.id === 'bandage' ? 'Use Big Plaster' : `Eat ${it.name}`]);
     return list.slice(0, 2);
   }
   function coachPrompts() {
@@ -2455,15 +2780,25 @@
     }
     const kHtml = blocked || mouse.touch ? '' : promptHTML(coachPrompts());
     if (kHtml !== lastCoach) { coachEl.innerHTML = kHtml; coachEl.hidden = !kHtml; lastCoach = kHtml; }
+    const px = (player.x + player.w / 2) * TILE - camera.x;
+    let top = player.y * TILE - camera.y - 14; // stack coach, then speech, upwards from Tam's head
     if (kHtml) {
-      const px = (player.x + player.w / 2) * TILE - camera.x, py = player.y * TILE - camera.y;
-      coachEl.style.transform = `translate(${Math.round(px - coachEl.offsetWidth / 2)}px, ${Math.round(py - coachEl.offsetHeight - 14)}px)`;
+      top -= coachEl.offsetHeight;
+      coachEl.style.transform = `translate(${Math.round(px - coachEl.offsetWidth / 2)}px, ${Math.round(top)}px)`;
+      top -= 6;
+    }
+    // Tam's speech bubble
+    const sText = speech.t > 0 && invOpen() === false && storyEl.hidden ? speech.text : '';
+    if (sText !== lastSpeech) { speechEl.textContent = sText; speechEl.hidden = !sText; lastSpeech = sText; }
+    if (sText) {
+      top -= speechEl.offsetHeight + 6;
+      speechEl.style.transform = `translate(${Math.round(Math.max(8, Math.min(viewW - speechEl.offsetWidth - 8, px - speechEl.offsetWidth / 2)))}px, ${Math.round(Math.max(8, top))}px)`;
     }
   }
 
   // ---------- New-world story ----------
-  const REGIONS = ['Ashfall Flats', 'The Rust Basin', 'Cinder Reach', 'Hollow Mile', 'The Glass Wastes',
-    'Dustbowl Sector', 'Old Meridian', 'The Scorched Rise', 'Greywater Ruins', 'Fallout Ridge'];
+  const REGIONS = ['Clyde Crater', 'The Barras Wastes', 'Sauchiehall Scorch', 'Govan Glow', 'Partick Pit',
+    'Maryhill Mire', 'The Gorbals Glassland', 'Byres Road Ruins', 'Dennistoun Dust', 'Springburn Scorch'];
   const storyEl = document.getElementById('story');
   let helpAfterStory = false;
   function showStory(firstLaunch) {
@@ -2473,7 +2808,9 @@
       ['Supply chests detected', chests.length],
       ['Ruined buildings', d.ruins],
       ['Blast craters', d.craters],
-      ['Oak trees still standing', d.oaks],
+      ['Oak trees standing', d.oaks],
+      ['Pals', 'nane'],
+      ['Scran', "dunno, go an' look"],
     ];
     const list = document.getElementById('story-facts');
     list.replaceChildren(...facts.map(([k, v]) => {
@@ -2489,6 +2826,8 @@
     document.getElementById('story-go').focus({ preventScroll: true });
   }
   document.getElementById('story-go').addEventListener('click', () => {
+    setTimeout(() => say('start', { force: true }), 900);
+    setTimeout(() => radio('hello'), 6000);
     storyEl.hidden = true;
     if (helpAfterStory) helpEl.hidden = false;
     sfx.click();
@@ -2540,6 +2879,7 @@
     spawn();
     enemies = []; arrows = []; floaters = [];
     spawnTimer = 30;
+    resetWeather();
     computeLight();
     snapCamera();
     uiDirty = true;
@@ -2574,6 +2914,7 @@
       if (uiDirty) renderUI();
       drawStaminaBar();
       drawFoodBar();
+      drawWeatherChip();
       updatePrompts();
       requestAnimationFrame(frame);
     }

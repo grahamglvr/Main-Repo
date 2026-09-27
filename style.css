@@ -111,7 +111,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 #vitals {
   position: fixed; left: 50%; transform: translateX(-50%);
   bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 30px);
-  width: min(280px, calc(100vw - 32px));
+  width: min(320px, calc(100vw - 32px));
   display: flex; flex-direction: column; gap: 3px;
   padding: 5px 8px;
   background: color-mix(in srgb, var(--panel) 88%, transparent);
@@ -133,7 +133,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 
 #toast {
   position: fixed; left: 50%; transform: translateX(-50%);
-  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 108px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 152px);
   padding: 6px 12px; border-radius: 4px;
   background: var(--panel); border: 2px solid var(--edge);
   opacity: 0; transition: opacity .2s; pointer-events: none;
@@ -179,7 +179,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 
 #touch {
   position: fixed; left: 16px; right: 16px;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 106px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 150px);
   display: flex; justify-content: space-between; pointer-events: none;
 }
 #touch .pad { display: flex; gap: 8px; pointer-events: auto; }
@@ -234,6 +234,40 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   background: linear-gradient(#f4ecd6, #d9cba5); border: 1px solid #8a7a52; border-bottom-width: 3px; border-radius: 4px;
 }
 
+/* Tam's speech bubble */
+#speech {
+  position: fixed; left: 0; top: 0; z-index: 6; pointer-events: none;
+  max-width: 24ch; padding: 6px 10px;
+  font: 600 14px/1.3 "Barlow", system-ui, sans-serif; color: #1d1a14;
+  background: #f4ecd6; border: 2px solid #1d1a14; border-radius: 10px;
+  box-shadow: 0 2px 0 rgb(0 0 0 / .35);
+}
+#speech::after {
+  content: ""; position: absolute; left: 50%; bottom: -8px; margin-left: -6px;
+  border: 6px solid transparent; border-top-color: #1d1a14; border-bottom: 0;
+}
+
+/* Wee Davie on the radio */
+#radio {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 8;
+  top: calc(env(safe-area-inset-top, 0px) + 150px);
+  width: min(460px, calc(100vw - 32px)); box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 3px; padding: 8px 12px;
+  border-color: #6fb3de; background: color-mix(in srgb, #10202a 92%, transparent);
+}
+#radio .label { color: #6fb3de; }
+#radio.in { animation: radio-in .35s both; }
+@keyframes radio-in { from { opacity: 0; transform: translate(-50%, -6px); } }
+
+/* Weather readout */
+#weather-row { display: flex; gap: 8px; align-items: baseline; font-size: 13px; padding-bottom: 2px; border-bottom: 1px solid var(--edge); white-space: nowrap; }
+#weather-text { overflow: hidden; text-overflow: ellipsis; }
+#weather-row .label { font-size: 11px; min-width: 7.5ch; }
+#weather-row[data-kind="warn"] #weather-text { color: var(--brass); }
+#weather-row[data-kind="ash"] #weather-text { color: #c9b8a6; }
+#weather-row[data-kind="rain"] #weather-text { color: #8fc3e6; }
+#weather-row[data-kind="heat"] #weather-text { color: #ff9a4e; }
+
 /* Tips beside the goal */
 .hud-left { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
 #tips {
@@ -247,7 +281,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 #tip-line.fade { opacity: 0; }
 @media (max-width: 640px) { #tips { display: none; } }
 
-@media (prefers-reduced-motion: reduce) { #toast, #health-fill, #tip-line { transition: none; } #stamina.empty .track { animation: none; } }
+@media (prefers-reduced-motion: reduce) { #toast, #health-fill, #tip-line { transition: none; } #stamina.empty .track { animation: none; } #radio.in { animation: none; } }
 
 /* New-world story */
 #story {

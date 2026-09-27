@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Blockstead</title>
+<title>Hawd Yer Weesht, It's the Apocalypse</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&display=swap">
@@ -29,8 +29,8 @@
 </div>
 
 <div id="help" class="panel">
-  <h2>Blockstead</h2>
-  <p class="intro">The world ended. Scavenge the wasteland: follow the gold arrow to supply chests, craft tools and weapons, and fight off the mutants.</p>
+  <h2>Hawd Yer Weesht, It's the Apocalypse</h2>
+  <p class="intro">It's 2210 an' the world's been blootered. Get oot there, Tam: follow the gold arrow tae the supply chests, build yersel' some gear, an' batter the mutants.</p>
   <h2>Controls</h2>
   <dl>
     <dt>A / D</dt><dd>Walk</dd>
@@ -45,8 +45,9 @@
     <dt>H</dt><dd>Show or hide this panel</dd>
   </dl>
   <p>Pickaxes mine stone fastest and hatchets chop wood fastest, but either works on both. Oak needs a Stone Hatchet or better to chop quickly.</p>
-  <p>Mutant rats and ghouls attack on contact. Deep underground, pale crawlers hunt in the dark, but they run from fire: carry a torch or stay near a campfire. Falling more than 4 blocks also hurts.</p>
-  <p>Heal with berries, bandages, or raw meat cooked on a Campfire.</p>
+  <p>Big Mingers (mutant rats) and Bawheids (ghouls) attack on contact. Deep underground, Peely-Wallies hunt in the dark, but they run from fire: carry a torch or stay near a Wee Fire. Falling more than 4 blocks also hurts.</p>
+  <p>Heal with Wee Berries, a Big Plaster, or a Rat Piece (raw meat cooked on a Wee Fire).</p>
+  <p>Weather changes every few minutes, and Wee Davie radios a warning first. Ash Cloud hurts you outside, so get under a roof or underground. Heavy Dreich regrows plants but puts out fires left in the open. Taps Aff makes you hungry and tired faster in the sun.</p>
   <p>Your food bar drains slowly. Eat berries or cooked meat before it runs out, or you start to starve.</p>
   <p>Jumping, swinging tools and fighting use stamina. Walking doesn't. Pause for a moment and it refills.</p>
   <p>You can only mine blocks you can see. Clear anything in the way first.</p>
@@ -58,11 +59,11 @@
   <div class="panel story-panel">
     <span class="label">Year 2210 · Surface report</span>
     <h2 id="story-region">The Wasteland</h2>
-    <p>Nuclear war and a century of natural disasters have left the surface in ruins.</p>
-    <p>You are the last survivor of the underground bunker. The air filters have failed, and it is time to climb out.</p>
-    <p>Fight to survive, scavenge what you can, and search the ruins for the technology of the old world.</p>
+    <p>It's 2210. The world got blootered by nukes an' mental weather while you were doon the bunker.</p>
+    <p>You're Tam. You've been doon there that long ye forgot whit the sky looks like. The air filter's packed in an' there's nae scran left.</p>
+    <p>Time tae get oot, find some gear, an' dig up whatever the auld world left lyin' aboot.</p>
     <dl id="story-facts"></dl>
-    <p class="threat">Mutant rats and ghouls roam the surface. Something pale moves in the deep caves. It hates fire.</p>
+    <p class="threat">Big Mingers an' Bawheids roam the surface. Somethin' peely-wally moves in the deep caves. It hates fire. Relatable.</p>
     <button id="story-go" type="button">Leave the bunker</button>
   </div>
 </div>
@@ -80,6 +81,7 @@
 </div>
 
 <div id="vitals">
+  <div id="weather-row" data-kind="clear"><span class="label">Weather</span><span id="weather-text">Clear</span></div>
   <div id="health" class="bar" role="meter" aria-label="Health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
     <span class="label">Health</span>
     <div class="track"><div id="health-fill"></div></div>
@@ -104,6 +106,11 @@
     <button id="tip-recipe" type="button">Show recipe</button>
     <button id="tip-close" type="button">Keep chopping</button>
   </div>
+</div>
+<div id="speech" role="status" aria-live="polite" hidden></div>
+<div id="radio" class="panel" role="status" aria-live="polite" hidden>
+  <span class="label">Radio · Wee Davie</span>
+  <span id="radio-text"></span>
 </div>
 <div id="prompt" class="keyprompt" aria-hidden="true" hidden></div>
 <div id="coach" class="keyprompt" aria-hidden="true" hidden></div>
