@@ -11,15 +11,21 @@ Keep `voice.js` next to it: that file holds the recorded voice.
 It works best on a tablet or touchscreen laptop; a mouse works too.
 Tap the speech bubble at any time to hear the instruction again.
 
-| Game | What she practises | How |
+Each game mixes up what it asks every round so it doesn't get repetitive.
+
+| Game | What she practises | Variations |
 | --- | --- | --- |
-| 🧱 Brick Builder | Shapes, colours, building | Drag each piece onto the outline with the same colour and shape to build a car, rocket, castle and more, then watch it come alive |
-| 🦄 Unicorn Colours | Colour matching and colour names | Tap the balloon that matches the star |
-| 🐶 Puppy Counting | Counting 1 to 10 | Tap each puppy to count it, then tap the number |
-| 🏴‍☠️ Pirate Treasure | Sorting by colour | Drag each jewel into the same colour chest |
-| 🧩 Magic Jigsaws | Jigsaws | Drag pieces onto the faint picture |
-| 🧛 Vampire Shadows | Shape matching | Tap the shadow that matches the picture |
-| 👑 Dress-up Patterns | Patterns / what comes next | Tap the item that finishes the pattern |
+| 🧱 Brick Builder | Shapes, colours, building | 15 models to build: car, boat, apple tree, ice cream, snowman, cupcake, rocket, house, fire engine, train, butterfly, flower, castle, pirate ship, robot |
+| 🦄 Unicorn Colours | Colour matching and names | Find the right coloured balloon, butterfly, cupcake or fish |
+| 🐶 Puppy Counting | Counting 1 to 10 | Count the group and tap the number · give the puppy the right number of bones · which side has more (or fewer) |
+| 🏴‍☠️ Pirate Treasure | Sorting | Sort treasure by colour, or by shape (coins, stars, jewels) |
+| 🧩 Magic Jigsaws | Jigsaws | 10 pictures: unicorn, pirate ship, puppy, vampire castle, princess, mermaid, space, farm, dinosaur, fairy |
+| 🧛 Vampire Shadows | Shape matching | Find the shadow of a picture · or work out whose shadow it is |
+| 🎴 Memory Match | Memory | Turn over cards to find matching pairs |
+| 🖍️ Colouring Book | Creativity, colour names | Pick a colour and tap parts of a picture to colour it in |
+| 🫧 Bubble Pop | Numbers, colours, letters | Pop the right number · pop the right colour · pop L, I, L, Y to spell her name |
+| 🦉 Odd One Out | Spotting differences | Find the different picture, colour or size |
+| 👑 Dress-up Patterns | Patterns / what comes next | Dress-up things, bead necklaces, or animals |
 
 Anything she drags can also be tapped, then tapped again where it should go.
 
@@ -34,9 +40,13 @@ Anything she drags can also be tapped, then tapped again where it should go.
   | Puppy Counting | up to 3 | up to 5 | up to 10, no dot hints |
   | Pirate Treasure | 2 chests, 4 jewels | 2 chests, 6 jewels | 3 chests, 9 jewels |
   | Magic Jigsaws | 4 pieces | 6 pieces | 9 pieces |
-  | Vampire Shadows | 3 shadows | 4 shadows | 5 shadows |
+  | Vampire Shadows | 3 choices | 4 choices | 5 choices |
   | Dress-up Patterns | AB | AAB / ABB | ABC |
-  | Brick Builder | 4 pieces (car, boat, tree, ice cream) | 5–6 pieces (rocket, house, fire engine) | 7–8 pieces (flower, castle, pirate ship) |
+  | Brick Builder | 4 pieces | 5–6 pieces | 7–8 pieces |
+  | Memory Match | 3 pairs | 4 pairs | 6 pairs |
+  | Colouring Book | simple pictures | medium pictures | detailed pictures |
+  | Bubble Pop | slow bubbles, numbers to 5 | faster, numbers to 9 | fastest, numbers to 10 |
+  | Odd One Out | 3 pictures | 4 pictures | 5 pictures |
 - Stars, stickers and difficulty are saved in the browser on that device.
 - The speaker button in the top-right turns the voice and sounds on or off.
 - The house button in the top-left goes back to the game menu.
