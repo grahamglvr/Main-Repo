@@ -175,6 +175,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .recipe .name { font-weight: 600; }
 .recipe .needs { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 10px; }
 .recipe .needs .miss { color: var(--bad); }
+.recipe .needs .or { color: var(--brass); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
 .recipe .station { font-size: 10px; color: var(--brass); }
 
 #touch {

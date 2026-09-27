@@ -31,7 +31,7 @@ python3 -m http.server 8000
 | K | Show or hide key prompts |
 | H | Show or hide the controls |
 
-Key prompts show what to press: beside the crosshair for what the mouse will do (mine, chop, place, open, attack, shoot, eat), and above your character for movement, ladders and crafting stations. First-time prompts disappear once you've used that control.
+Key prompts show what to press: beside the crosshair for what the mouse will do (mine, chop, place, open, attack, shoot, eat), and above your character for movement, ladders and crafting stations. Each prompt disappears for good once you've done that action 4 times.
 
 On touch screens, on-screen buttons appear. Tap the **Mine / Build** button to switch what a tap on the world does.
 
@@ -45,7 +45,7 @@ On touch screens, on-screen buttons appear. Tap the **Mine / Build** button to s
 
 ### Items
 
-Every item belongs to a category, shown as a coloured corner on inventory slots and as tabs in the crafting menu. Recipes you can make right now are listed first, under **Ready to craft**:
+Every item belongs to a category, shown as a coloured corner on inventory slots and as tabs in the crafting menu. Recipes you can make right now are listed first, under **Ready to craft**. Items with more than one recipe (Iron Ingot, Planks, Ladder) show each option in one row, and Craft uses whichever you have materials for:
 
 | Category | Examples |
 | --- | --- |
@@ -60,7 +60,7 @@ Leaves and bushes drop fibre. Each piece of fibre has a 50% chance of coming wit
 
 - **Pickaxes** are fastest on stone and ore, and **hatchets** are fastest on wood. Either works on both, just more slowly.
 - **Oak trees** are 5x tougher than normal trees and drop 2 oak logs per block. Anything below a Stone Hatchet chops oak slowly, and a pop-up suggests the upgrade.
-- **Daggers** (wood, stone, iron) hit enemies you click within reach. **Bows** (Shortbow, Oak Shortbow, The Persuader) shoot your best **arrows** (wooden, stone, iron) toward the crosshair.
+- **Daggers** (wood, stone, iron) hit enemies you click within reach. **Bows** (Shortbow, Oak Shortbow, The Persuader) shoot your best **arrows** toward the crosshair. Arrows are cheap: 8 wooden arrows from 1 stick and 1 fibre, or 12 stone or iron arrows from 1 stick and 1 cobblestone or iron ingot.
 
 ### Survival
 

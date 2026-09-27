@@ -178,9 +178,9 @@
     { out: 'wood_bow', n: 1, needs: { stick: 3, rope: 1, string: 2 }, at: 'bench' },
     { out: 'oak_bow', n: 1, needs: { oak_log: 2, rope: 1, string: 2 }, at: 'bench' },
     { out: 'iron_bow', n: 1, needs: { iron_ingot: 2, oak_log: 1, rope: 1, string: 2 }, at: 'bench' },
-    { out: 'wood_arrow', n: 4, needs: { stick: 1, fibre: 1 } },
-    { out: 'stone_arrow', n: 8, needs: { stick: 2, cobble: 1 }, at: 'bench' },
-    { out: 'iron_arrow', n: 8, needs: { stick: 2, iron_ingot: 1 }, at: 'bench' },
+    { out: 'wood_arrow', n: 8, needs: { stick: 1, fibre: 1 } },
+    { out: 'stone_arrow', n: 12, needs: { stick: 1, cobble: 1 }, at: 'bench' },
+    { out: 'iron_arrow', n: 12, needs: { stick: 1, iron_ingot: 1 }, at: 'bench' },
   ];
   const STATION_BLOCK = { bench: B.BENCH, furnace: B.FURNACE, campfire: B.CAMPFIRE };
   // A recipe's `at` is one station or a list where any of them will do.
@@ -1028,14 +1028,13 @@
   const invOpen = () => !invEl.hidden;
   window.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
-    if (k === 'e') { learned('inventory'); toggleInv(); e.preventDefault(); return; }
+    if (k === 'e') { if (invEl.hidden) didAction('inventory'); toggleInv(); e.preventDefault(); return; }
     if (k === 'k') { togglePrompts(); return; }
     if (k === 'escape') { if (invOpen()) toggleInv(false); helpEl.hidden = true; return; }
     if (k === 'h') { helpEl.hidden = !helpEl.hidden; return; }
     if (k === 'm') { toggleSound(); return; }
-    if (k >= '1' && k <= '9') { selected = +k - 1; uiDirty = true; learned('hotbar'); return; }
-    if (k === 'a' || k === 'd' || k === 'arrowleft' || k === 'arrowright') learned('walk');
-    if (k === ' ' || k === 'w' || k === 'arrowup') learned('jump');
+    if (k >= '1' && k <= '9') { selected = +k - 1; uiDirty = true; didAction('hotbar'); return; }
+    if (!e.repeat && (k === 'a' || k === 'd' || k === 'arrowleft' || k === 'arrowright')) didAction('walk');
     keys[k] = true;
     if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
   });
@@ -1065,7 +1064,7 @@
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
     selected = (selected + (e.deltaY > 0 ? 1 : -1) + 9) % 9;
-    learned('hotbar');
+    didAction('hotbar');
     uiDirty = true;
   }, { passive: false });
 
@@ -1182,6 +1181,7 @@
     say('chest', { force: true });
   }
   function openChest(tx, ty) {
+    didAction('chest');
     tiles[idx(tx, ty)] = B.AIR;
     lootChest();
     scanChests();
@@ -1283,6 +1283,7 @@
     if (!helps) { toast(f.food ? "You're not hungry and your health is full" : 'Your health is already full'); return; }
     removeItem(it.id, 1);
     sfx.eat();
+    didAction('eat');
     const parts = [];
     if (f.heal) { heal(f.heal); parts.push(`+${f.heal} health`); }
     if (f.food) { player.food = Math.min(MAX_FOOD, player.food + f.food); parts.push(`+${f.food} food`); }
@@ -1610,6 +1611,7 @@
     player.swing = 0.2;
     player.face = Math.sign(centre(e)[0] - centre(player)[0]) || player.face;
     sfx.swing();
+    didAction('attack');
     damageEnemy(e, dmg, centre(player)[0]);
   }
 
@@ -1625,6 +1627,7 @@
       dmg: ITEM[ammo].arrow + bow.bonus, tip: ITEM[ammo].tip, life: 3 });
     player.face = Math.cos(ang) < 0 ? -1 : 1;
     sfx.bow();
+    didAction('shoot');
   }
 
   function updateArrows(dt) {
@@ -1667,9 +1670,11 @@
 
     if (onClimbable()) {
       player.vy = up ? -5 : down ? 5 : 0;
+      if ((up || down) && !player.climbing) didAction('climb');
+      player.climbing = up || down;
     } else {
       player.vy = Math.min(player.vy + GRAVITY * dt, MAX_FALL);
-      if (up && player.onGround && spend('jump')) { player.vy = JUMP; sfx.jump(); }
+      if (up && player.onGround && spend('jump')) { player.vy = JUMP; sfx.jump(); didAction('jump'); }
     }
     const fallSpeed = player.vy;
 
@@ -1737,7 +1742,7 @@
           if (!swingDue || spend('swing')) {
             if (swingDue) sfx.hit(materialOf(b));
             mining.t += dt;
-            if (mining.t >= mineTime(b)) { breakBlock(t.tx, t.ty); mining.t = 0; }
+            if (mining.t >= mineTime(b)) { didAction(bd.pref === 'axe' ? 'chop' : 'mine'); breakBlock(t.tx, t.ty); mining.t = 0; }
           }
         }
       }
@@ -1759,6 +1764,7 @@
         tiles[idx(t.tx, t.ty)] = block;
         removeItem(it.id, 1);
         sfx.place();
+        didAction('place');
         if (block === B.BENCH) progress.placed_bench = true;
         computeLight();
       }
@@ -2562,21 +2568,49 @@
       tabsEl.append(b);
     }
     recipesEl.replaceChildren();
-    // Recipes you can make right now come first, then the rest grouped by category.
+    // One row per item. Items with more than one recipe (Iron Ingot, Planks, Ladder) list each
+    // option, and Craft uses the first one you have materials for.
+    // Rows you can craft right now come first, then the rest grouped by category.
     const byCat = (a, b) => CATS.indexOf(ITEM[a.out].cat) - CATS.indexOf(ITEM[b.out].cat);
-    const shown = RECIPES.filter(r => craftFilter === 'All' || ITEM[r.out].cat === craftFilter);
-    const ready = shown.filter(r => canCraft(r, st)).sort(byCat);
-    const later = shown.filter(r => !canCraft(r, st)).sort(byCat);
+    const rows = [];
+    for (const r of RECIPES) {
+      if (craftFilter !== 'All' && ITEM[r.out].cat !== craftFilter) continue;
+      let row = rows.find(x => x.out === r.out);
+      if (!row) rows.push(row = { out: r.out, options: [] });
+      row.options.push(r);
+    }
+    for (const row of rows) row.use = row.options.find(r => canCraft(r, st)) || null;
+    const ready = rows.filter(r => r.use).sort(byCat);
+    const later = rows.filter(r => !r.use).sort(byCat);
     const heading = (text, cls) => {
       const h = document.createElement('h4');
       h.className = `group ${cls}`;
       h.textContent = text;
       recipesEl.append(h);
     };
+    const needsLine = (r, first) => {
+      const needs = document.createElement('div');
+      needs.className = 'needs';
+      if (!first) { const o = document.createElement('span'); o.className = 'or'; o.textContent = 'or'; needs.append(o); }
+      for (const [id, n] of Object.entries(r.needs)) {
+        const s = document.createElement('span');
+        const have = count(id);
+        s.textContent = `${ITEM[id].name} ${Math.min(have, n)}/${n}`;
+        if (have < n) s.className = 'miss';
+        needs.append(s);
+      }
+      if (r.at) {
+        const s = document.createElement('span');
+        s.className = 'station' + (stationsFor(r).some(x => st[x]) ? '' : ' miss');
+        s.textContent = `at ${stationsFor(r).map(x => ITEM[x].name).join(' or ')}`;
+        needs.append(s);
+      }
+      return needs;
+    };
     let lastGroup = null;
-    for (const r of [...ready, ...later]) {
-      const ok = ready.includes(r);
-      const cat = ITEM[r.out].cat;
+    for (const entry of [...ready, ...later]) {
+      const ok = !!entry.use, r = entry.use || entry.options[0];
+      const cat = ITEM[entry.out].cat;
       const group = ok ? 'ready' : craftFilter === 'All' ? cat : 'later';
       if (group !== lastGroup) {
         if (group === 'ready') heading('Ready to craft', 'ready');
@@ -2588,36 +2622,21 @@
       row.className = 'recipe' + (ok ? ' ok' : '');
       const icon = document.createElement('div');
       icon.className = 'icon';
-      icon.style.backgroundImage = `url(${ICON_URL[r.out]})`;
+      icon.style.backgroundImage = `url(${ICON_URL[entry.out]})`;
       const mid = document.createElement('div');
       const name = document.createElement('div');
       name.className = 'name';
-      name.textContent = (r.n > 1 ? r.n + ' × ' : '') + ITEM[r.out].name;
-      if (r.out === highlightRecipe) row.classList.add('focus');
+      name.textContent = (r.n > 1 ? r.n + ' × ' : '') + ITEM[entry.out].name;
+      if (entry.out === highlightRecipe) row.classList.add('focus');
       mid.append(name);
-      const desc = describe(r.out);
+      const desc = describe(entry.out);
       if (desc) {
         const d = document.createElement('div');
         d.className = 'desc';
         d.textContent = desc;
         mid.append(d);
       }
-      const needs = document.createElement('div');
-      needs.className = 'needs';
-      for (const [id, n] of Object.entries(r.needs)) {
-        const s = document.createElement('span');
-        const have = count(id);
-        s.textContent = `${ITEM[id].name} ${Math.min(have, n)}/${n}`;
-        if (have < n) s.className = 'miss';
-        needs.append(s);
-      }
-      if (r.at) {
-        const s = document.createElement('span');
-        s.className = 'station' + (stationsFor(r).some(x => st[x]) ? '' : ' miss');
-        s.textContent = `at ${stationsFor(r).map(st => ITEM[st].name).join(' or ')}`;
-        needs.append(s);
-      }
-      mid.append(needs);
+      entry.options.forEach((o, i) => mid.append(needsLine(o, i === 0)));
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = 'Craft';
@@ -2723,13 +2742,23 @@
 
   // ---------- Key prompts ----------
   // Beside the crosshair: what the mouse buttons do right now.
-  // Above the player: movement, ladders, crafting stations, and first-time controls until they've been used.
-  const PROMPTS_KEY = 'blockstead-prompts';
+  // Above the player: movement, ladders, crafting stations and other controls.
+  // Each prompt hides for good once you've done that action 4 times.
+  const PROMPTS_KEY = 'blockstead-prompts', PROMPT_LIMIT = 4;
   const promptEl = document.getElementById('prompt'), coachEl = document.getElementById('coach');
-  let prompts = { on: true, learned: {} };
+  let prompts = { on: true, count: {} };
   try { Object.assign(prompts, JSON.parse(localStorage.getItem(PROMPTS_KEY)) || {}); } catch { /* defaults */ }
+  if (prompts.learned) { // older saves stored a yes/no per control
+    for (const k in prompts.learned) if (prompts.learned[k]) prompts.count[k] = PROMPT_LIMIT;
+    delete prompts.learned;
+  }
   const savePrompts = () => { try { localStorage.setItem(PROMPTS_KEY, JSON.stringify(prompts)); } catch { /* not saved */ } };
-  function learned(what) { if (!prompts.learned[what]) { prompts.learned[what] = true; savePrompts(); } }
+  const knows = what => (prompts.count[what] || 0) >= PROMPT_LIMIT;
+  function didAction(what) {
+    if (knows(what)) return;
+    prompts.count[what] = (prompts.count[what] || 0) + 1;
+    savePrompts();
+  }
   function togglePrompts() {
     prompts.on = !prompts.on;
     savePrompts();
@@ -2745,28 +2774,32 @@
     const it = held() && ITEM[held().id];
     const t = targetTile();
     const foe = enemyAtMouse();
-    if (it && it.bow) list.push(['Left click', ARROWS.some(a => count(a) > 0) ? 'Shoot' : 'Shoot (no arrows)']);
-    else if (foe && Math.hypot(centre(foe)[0] - centre(player)[0], centre(foe)[1] - centre(player)[1]) <= MELEE_REACH) list.push(['Left click', `Attack ${ENEMY[foe.type].name}`]);
-    else if (t.inReach) {
+    const noArrows = !ARROWS.some(a => count(a) > 0);
+    if (it && it.bow) { if (!knows('shoot') || noArrows) list.push(['Left click', noArrows ? 'Shoot (no arrows)' : 'Shoot']); }
+    else if (foe && Math.hypot(centre(foe)[0] - centre(player)[0], centre(foe)[1] - centre(player)[1]) <= MELEE_REACH) {
+      if (!knows('attack')) list.push(['Left click', `Attack ${ENEMY[foe.type].name}`]);
+    } else if (t.inReach) {
       const b = get(t.tx, t.ty);
-      if (b === B.CHEST && t.visible) list.push(['Right click', 'Open chest']);
+      if (b === B.CHEST && t.visible && !knows('chest')) list.push(['Right click', 'Open chest']);
       if (b !== B.AIR && b !== B.BEDROCK) {
+        const chop = BLOCK[b].pref === 'axe';
         if (!t.visible) list.push(['', 'Something is in the way']);
-        else list.push(['Left click', `${BLOCK[b].pref === 'axe' ? 'Chop' : 'Mine'} ${BLOCK[b].name}`]);
-      } else if (b === B.AIR && it && it.block && hasSupport(t.tx, t.ty)) list.push(['Right click', `Place ${it.name}`]);
+        else if (!knows(chop ? 'chop' : 'mine')) list.push(['Left click', `${chop ? 'Chop' : 'Mine'} ${BLOCK[b].name}`]);
+      } else if (b === B.AIR && it && it.block && hasSupport(t.tx, t.ty) && !knows('place')) list.push(['Right click', `Place ${it.name}`]);
     }
-    if (it && (it.heal || it.food)) list.push(['Right click', it.id === 'bandage' ? 'Use Big Plaster' : `Eat ${it.name}`]);
+    if (it && (it.heal || it.food) && !knows('eat')) list.push(['Right click', it.id === 'bandage' ? 'Use Big Plaster' : `Eat ${it.name}`]);
     return list.slice(0, 2);
   }
   function coachPrompts() {
-    if (onClimbable()) return [[['W'], 'Climb'], [['S'], 'Down']];
-    const L = prompts.learned;
-    if (!L.walk) return [[['A', 'D'], 'Walk']];
-    if (!L.jump) return [[['Space'], 'Jump']];
-    const st = nearStations();
-    if (st.bench || st.furnace || st.campfire) return [[['E'], 'Craft']];
-    if (!L.inventory && inv.some(Boolean)) return [[['E'], 'Inventory and crafting']];
-    if (!L.hotbar && inv.slice(0, 9).filter(Boolean).length > 1) return [[['1–9'], 'Switch item']];
+    if (onClimbable() && !knows('climb')) return [[['W'], 'Climb'], [['S'], 'Down']];
+    if (!knows('walk')) return [[['A', 'D'], 'Walk']];
+    if (!knows('jump')) return [[['Space'], 'Jump']];
+    if (!knows('inventory')) {
+      const st = nearStations();
+      if (st.bench || st.furnace || st.campfire) return [[['E'], 'Craft']];
+      if (inv.some(Boolean)) return [[['E'], 'Inventory and crafting']];
+    }
+    if (!knows('hotbar') && inv.slice(0, 9).filter(Boolean).length > 1) return [[['1–9'], 'Switch item']];
     return [];
   }
   function updatePrompts() {
