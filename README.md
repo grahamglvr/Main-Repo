@@ -62,6 +62,7 @@ Leaves and bushes drop fibre. Each piece of fibre has a 50% chance of coming wit
 
 ### Tools and weapons
 
+- **Upgrades replace old gear.** Pickaxes, hatchets, blades (daggers up to the Claymore) and bows each form a line; getting a better one swaps it into the old one's slot, and outgrown gear is hidden from crafting and never drops from chests.
 - **Pickaxes** are fastest on stone and ore, and **hatchets** are fastest on wood. Either works on both, just more slowly.
 - **Oak trees** are 5x tougher than normal trees and drop 2 oak logs per block. Anything below a Stone Hatchet chops oak slowly, and a pop-up suggests the upgrade.
 - **Daggers** (wood, stone, iron) hit enemies you click within reach. **Bows** (Shortbow, Oak Shortbow, The Persuader) shoot your best **arrows** toward the crosshair. Arrows are cheap: 8 wooden arrows from 1 stick and 1 fibre, or 12 stone or iron arrows from 1 stick and 1 cobblestone or iron ingot.
@@ -70,12 +71,12 @@ Leaves and bushes drop fibre. Each piece of fibre has a 50% chance of coming wit
 
 - You have **100 health**. **Big Mingers** (mutant rats) and **Bawheids** (ghouls) roam the surface and dark caves and hurt you on contact. Falls of more than 4 blocks also hurt.
 - Creatures wander at random and only chase you when you're within about 10 blocks and nothing solid blocks their view.
-- **Peely-Wallies** are pale, blind cave dwellers. They lurk in the twilight zone, the first dark caves below where daylight fades (about 14–32 blocks down), even while you're on the surface. They hunt Tam, or rats if Tam isn't in sight, but won't step into bright light (except under an Ash Cloud) and run from fire: placed torches, Wee Fires and furnaces, or a torch in your hand.
+- **Peely-Wallies** move like bugs: sudden darts, dead stops and twitches, and they scuttle straight up walls. They screech when they spot you, and you'll hear your heartbeat when one is close. They are pale, blind cave dwellers. They lurk in the twilight zone, the first dark caves below where daylight fades (about 14–32 blocks down), even while you're on the surface. They hunt Tam, or rats if Tam isn't in sight, but won't step into bright light (except under an Ash Cloud) and run from fire: placed torches, Wee Fires and furnaces, or a torch in your hand.
 - Big Mingers drop raw meat. Cook it into a **Rat Piece** on a **Wee Fire** (3 logs, 2 sticks) or in a furnace. Bawheids and Peely-Wallies drop string and rope.
 - You also have **100 stamina**. Jumps (8), each tool swing (2), dagger hits (8) and bow shots (10) use it; walking doesn't. It refills after you rest for about a second.
 - Your **food** bar drains slowly (a full stomach lasts about 20 minutes). At 0 you start starving and lose 2 health every 4 seconds. Raw meat gives +10 food but makes you sick; cook it first.
 - **Irn Bru machines** sit in sealed brick rooms deep underground (25+ blocks down) and glow in the dark. Right click one for 3 cans. A can gives a **Bru Rush**: unlimited stamina and +50 health (max 150) for 60 seconds.
-- At 0 health you wake up back at the start and keep your items.
+- At 0 health you wake up back at the start. You lose your resources and blocks (things you can gather again) but keep your equipment, healing items and Irn Bru Empties.
 
 ### Endgame: The Big Haggis Hunt
 
@@ -90,6 +91,10 @@ A Mutant Haggis sleeps in a lair at the very bottom of the world, lit by glowing
 7. **Play the Bagpipes in the lair.** Without the full kit, the Haggis stirs and goes back to sleep.
 8. **Kill the Mutant Haggis** (600 health). It charges, spits lumps of neeps an' tatties, and enrages at half health with faster charges and triple spit. If you pass out, it goes back to sleep and you can try again. Victory earns 5 Haggis Suppers (full health and food).
 
+### The caves
+
+The deeper you go, the darker it gets: the light closes in round Tam, water drips, something groans in the rock, and now and then a far-off scream. Pale eyes watch from the black and vanish when you get close. Old bones litter the cave floors.
+
 ### Weather
 
 Clear spells of 2½–5 minutes alternate with 1½–3 minutes of weather. **Wee Davie** radios a warning about 25 seconds before it turns, and the vitals panel shows what's coming. Anything solid over your head counts as shelter (planks, bricks, glass), but leaves don't.
@@ -97,7 +102,7 @@ Clear spells of 2½–5 minutes alternate with 1½–3 minutes of weather. **Wee
 | Weather | Effects |
 | --- | --- |
 | **Ash Cloud** | Thick fog cuts your view. Outside, the ash costs 2 health every 4 seconds. Peely-Wallies can surface in the gloom. Get under a roof or underground. |
-| **Heavy Dreich** | Rain and fog. Bushes and young trees grow back. Torches and Wee Fires left in the open get put out. |
+| **Heavy Dreich** | Rain and fog. Bushes and young trees grow back fast (and keep growing faster for a while after). They also regrow slowly in dry weather. Torches and Wee Fires left in the open get put out. |
 | **Taps Aff** | Heatwave with heat haze. In the sun, food drains 2.5x faster and stamina refills at half speed. Tam takes his top off. |
 
 ### Tam and Wee Davie

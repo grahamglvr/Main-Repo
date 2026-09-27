@@ -41,7 +41,7 @@
     AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, COBBLE: 4, LOG: 5, LEAVES: 6, PLANK: 7,
     COAL_ORE: 8, IRON_ORE: 9, SAND: 10, BENCH: 11, FURNACE: 12, BRICK: 13,
     GLASS: 14, TORCH: 15, LADDER: 16, BEDROCK: 17, BUSH: 18,
-    OAK_LOG: 19, OAK_LEAVES: 20, CHEST: 21, SCRAP: 22, ASH: 23, CAMPFIRE: 24, VENDING: 25, VENDING_EMPTY: 26, GLOWCAP: 27,
+    OAK_LOG: 19, OAK_LEAVES: 20, CHEST: 21, SCRAP: 22, ASH: 23, CAMPFIRE: 24, VENDING: 25, VENDING_EMPTY: 26, GLOWCAP: 27, BONES: 28,
   };
   // hard: seconds to mine by hand. tier: tool tier needed (any pickaxe or hatchet counts).
   // pref: the tool that mines it at full speed ('pick' or 'axe'); other tools still help a little.
@@ -80,6 +80,7 @@
   def(B.VENDING, { name: 'Irn Bru Machine', solid: false, hard: 2, tier: 1, pref: 'pick', drop: 'scrap', dropN: 2, light: 7, cost: 1, sky: true });
   def(B.VENDING_EMPTY, { name: 'Empty Irn Bru Machine', solid: false, hard: 2, tier: 1, pref: 'pick', drop: 'scrap', dropN: 2, cost: 1, sky: true });
   // Glowcaps: eerie cave mushrooms that light the Haggis lair. Not fire, so Peely-Wallies don't mind them.
+  def(B.BONES, { name: 'Old Bones', solid: false, hard: 0.2, cost: 1, sky: true });
   def(B.GLOWCAP, { name: 'Glowcap', solid: false, hard: 0.2, drop: 'fibre', light: 11, cost: 1, sky: true });
   def(B.CAMPFIRE, { name: 'Wee Fire', solid: false, hard: 0.8, pref: 'axe', drop: 'campfire', light: 13, cost: 1, sky: true });
 
@@ -374,6 +375,12 @@
           p.px(2, 14, '#16171a', 12, 1);                           // can tray
           break;
         }
+        case B.BONES:
+          p.px(1, 11, '#d8d2c0', 5, 4); p.px(2, 10, '#d8d2c0', 3, 1); p.px(2, 12, '#1a1714', 1, 1); p.px(4, 12, '#1a1714', 1, 1); // skull
+          p.px(2, 15, '#b8b0a0', 3, 1);
+          p.px(7, 14, '#cfc8b6', 8, 1); [8, 10, 12, 14].forEach(x => p.px(x, 11, '#cfc8b6', 1, 3)); // ribs
+          p.line(9, 9, 14, 12, '#bdb5a2');
+          break;
         case B.GLOWCAP:
           p.px(7, 9, '#cfe3d0', 2, 7); p.px(6, 14, '#a8c0aa', 4, 2);                 // stalk
           p.px(3, 6, '#3fd6c4', 10, 3); p.px(4, 5, '#3fd6c4', 8, 1); p.px(5, 4, '#8ff0e4', 6, 1); // cap
@@ -778,6 +785,11 @@
       machines.push(x);
     }
     worldInfo.machines = machines.length;
+    // Old bones on cave floors, more of them the deeper you go
+    for (let x = 1; x < W - 1; x++) for (let y = surface[x] + 10; y < H - 6; y++) {
+      if (tiles[idx(x, y)] !== B.AIR || !BLOCK[tiles[idx(x, y + 1)]].solid) continue;
+      if (rnd() < 0.015 + (y - surface[x]) * 0.0006) tiles[idx(x, y)] = B.BONES;
+    }
     lair = makeLair(rnd);
     scanChests();
   }
@@ -879,7 +891,37 @@
   let selected = 0;
   const stackOf = id => ITEM[id].stack || STACK;
   function count(id) { return inv.reduce((s, it) => s + (it && it.id === id ? it.n : 0), 0); }
+  // Equipment upgrade lines, worst to best. A better item replaces the ones below it (in the same slot),
+  // and you can't craft or loot something you've already outgrown.
+  const GEAR_LINES = [
+    ['wood_pick', 'stone_pick', 'iron_pick'],
+    ['wood_axe', 'stone_axe', 'iron_axe'],
+    ['wood_dagger', 'stone_dagger', 'iron_dagger', 'claymore'],
+    ['wood_bow', 'oak_bow', 'iron_bow'],
+  ];
+  const gearLine = id => GEAR_LINES.find(l => l.includes(id));
+  function bestOwnedTier(line) {
+    let t = -1;
+    line.forEach((id, i) => { if (count(id) > 0) t = i; });
+    return t;
+  }
+  const outclassed = id => { const l = gearLine(id); return !!l && bestOwnedTier(l) >= l.indexOf(id); };
+
   function addItem(id, n) {
+    const line = gearLine(id);
+    if (line) {
+      if (outclassed(id)) { toast(`You've already got something as good as the ${ITEM[id].name}.`); return 0; }
+      let slot = -1;
+      for (const old of line) for (let i = 0; i < INV_SIZE; i++) {
+        if (inv[i] && inv[i].id === old) { if (slot < 0) slot = i; inv[i] = null; }
+      }
+      if (slot >= 0) { // upgrade in place
+        inv[slot] = { id, n: 1 };
+        markProgress();
+        uiDirty = true;
+        return 0;
+      }
+    }
     for (const it of inv) if (n > 0 && it && it.id === id && it.n < stackOf(id)) {
       const k = Math.min(n, stackOf(id) - it.n); it.n += k; n -= k;
     }
@@ -921,6 +963,7 @@
     return found;
   }
   function canCraft(r, stations) {
+    if (outclassed(r.out)) return false;
     const at = stationsFor(r);
     if (at.length && !at.some(st => stations[st])) return false;
     return Object.entries(r.needs).every(([id, n]) => count(id) >= n);
@@ -1096,6 +1139,11 @@
         tone({ freq: 116.5, dur: 2.2, type: 'sawtooth', gain: 0.07 }); tone({ freq: 233, dur: 2.2, type: 'sawtooth', gain: 0.05 }); // drones
         [466, 523, 587, 698, 587, 523, 466, 440].forEach((f, i) => tone({ freq: f, dur: 0.24, type: 'sawtooth', gain: 0.06, delay: 0.2 + i * 0.22 }));
       }),
+      screech: () => play(v => { tone({ freq: 1900 * v, to: 600, dur: 0.45, type: 'sawtooth', gain: 0.12 }); tone({ freq: 2600 * v, to: 900, dur: 0.35, type: 'square', gain: 0.04 }); noise({ type: 'highpass', freq: 2500, dur: 0.4, gain: 0.3 }); }),
+      heartbeat: () => play(() => { tone({ freq: 62, to: 45, dur: 0.12, gain: 0.5 }); tone({ freq: 58, to: 42, dur: 0.1, gain: 0.35, delay: 0.18 }); }),
+      drip: () => play(v => { tone({ freq: 1800 * v, to: 1100, dur: 0.08, gain: 0.08 }); tone({ freq: 1800 * v, to: 1100, dur: 0.08, gain: 0.03, delay: 0.25 }); }),
+      groan: () => play(v => { tone({ freq: 75 * v, to: 52, dur: 1.8, type: 'sawtooth', gain: 0.05 }); noise({ type: 'lowpass', freq: 220, dur: 1.6, gain: 0.25 }); }),
+      farScream: () => play(v => { tone({ freq: 950 * v, to: 480, dur: 1.1, gain: 0.035 }); noise({ type: 'bandpass', freq: 1200, q: 3, dur: 0.9, gain: 0.08 }); }),
       denied: () => play(() => tone({ freq: 160, to: 120, dur: 0.14, type: 'square', gain: 0.05 })),
       click: () => play(() => tone({ freq: 900, dur: 0.03, type: 'square', gain: 0.03 })),
     };
@@ -1263,7 +1311,9 @@
       line.items.forEach((id, i) => { if (count(id) > 0) have = i + 1; });
       line.items.forEach((id, i) => {
         const jump = i + 1 - have;
-        const w = (jump <= 0 ? 2.5 : TIER_JUMP_WEIGHT[jump]) * line.weight;
+        // Gear you've already outgrown never drops; arrows are ammo, so any tier can.
+        const w = line.min ? (jump <= 0 ? 2.5 : TIER_JUMP_WEIGHT[jump]) * line.weight
+          : outclassed(id) ? 0 : TIER_JUMP_WEIGHT[Math.max(1, jump)] * line.weight;
         table.push({ id, w, min: line.min ? line.min[i] : 1, max: line.max ? line.max[i] : 1 });
       });
     }
@@ -1339,6 +1389,9 @@
     toast('The machine clunks out 3 cans of Irn Bru. Select one and right click to drink.', 4000);
     computeLight();
   }
+  // On passing out you lose what you can gather again (resources and blocks), but keep equipment and healing items.
+  // Irn Bru Empties are kept too, since the machines don't refill.
+  const KEEP_ON_DEATH = new Set(['empty_can']);
   function hurt(n, cause = 'hurt') {
     player.hp = Math.max(0, player.hp - n);
     hurtFlash = 0.35;
@@ -1355,7 +1408,14 @@
       enemies = []; arrows = [];
       iframes = 2;
       snapCamera();
-      toast('You passed out and woke up back at the start. You kept your items.');
+      let lost = 0;
+      for (let i = 0; i < INV_SIZE; i++) {
+        const it = inv[i];
+        if (it && (ITEM[it.id].cat === 'Resources' || ITEM[it.id].cat === 'Building') && !KEEP_ON_DEATH.has(it.id)) { lost += it.n; inv[i] = null; }
+      }
+      uiDirty = true;
+      toast(lost ? `You passed out and woke up back at the start. You dropped your resources and blocks (${lost} items), but kept your equipment and healing items.`
+        : 'You passed out and woke up back at the start.', 6000);
       say('respawn', { force: true });
     }
   }
@@ -1394,6 +1454,7 @@
     pipesNothing: ["Naebody's comin'. Rude."],
     notReady: ["Ah'm no ready fur that yet.", 'Need the full kit first, big man.'],
     base: ['Hame sweet hame.', 'Pure dead cosy, this.'],
+    cave: ["Ah don't like this.", 'Whit wis that?!', "Hello? …Naw, don't answer.", "Ah'm no feart. Ah'm no feart."],
     bruEnd: ["Aw, the Bru's worn aff.", 'Need another can. Or ten.'],
   };
   const RADIO = {
@@ -1476,7 +1537,7 @@
   };
   const FIRST_WEATHER = 240, WARN_AHEAD = 25, FADE = 6;
   const weather = { kind: 'clear', shown: 'clear', next: null, t: FIRST_WEATHER, k: 0, warned: false };
-  let outside = true, outsideT = 0, ashT = 4, growT = 3, douseT = 2;
+  let outside = true, outsideT = 0, ashT = 4, growT = 3, douseT = 2, wetT = 0;
   const weatherOn = kind => weather.kind === kind && weather.k > 0.5;
   const heatOn = () => weatherOn('heat') && outside;
   function resetWeather() {
@@ -1521,17 +1582,18 @@
       ashT -= dt;
       if (ashT <= 0) { ashT = 4; hurt(2, 'ashHurt'); }
     } else ashT = 4;
-    if (weatherOn('rain')) {
-      if ((growT -= dt) <= 0) { growT = 3; regrow(); }
-      if ((douseT -= dt) <= 0) { douseT = 2; douseFires(); }
-    }
+    // Plants grow back over time: slowly in dry weather, fast in rain, and quicker for a while after it.
+    if (weatherOn('rain')) wetT = 90;
+    else wetT = Math.max(0, wetT - dt);
+    if ((growT -= dt) <= 0) { growT = weatherOn('rain') ? 3 : wetT > 0 ? 7 : 20; regrow(); }
+    if (weatherOn('rain') && (douseT -= dt) <= 0) { douseT = 2; douseFires(); }
   }
-  // Rain brings the wasteland back: new bushes, and now and then a young tree.
+  // The wasteland grows back: new bushes, and now and then a young tree. Mostly near Tam, sometimes anywhere.
   function regrow() {
     let changed = false;
     const px = Math.floor(player.x + player.w / 2);
-    for (let i = 0; i < 5; i++) {
-      const x = px + Math.floor(Math.random() * 81) - 40;
+    for (let i = 0; i < 8; i++) {
+      const x = i < 5 ? px + Math.floor(Math.random() * 81) - 40 : 3 + Math.floor(Math.random() * (W - 6));
       if (x < 3 || x >= W - 3 || Math.abs(x - px) < 2) continue;
       let y = 0;
       while (y < H && !BLOCK[get(x, y)].solid) y++;
@@ -1784,6 +1846,66 @@
     eat({ id: pickId });
   }
 
+  // ---------- Cave dread ----------
+  // Underground gets darker and closer the deeper Tam goes: a vignette, drips and groans in the dark,
+  // eyes that watch from the black and vanish when approached, and a heartbeat when a Peely-Wally is near.
+  let shakeT = 0, beatT = 0, caveT = 8, eyesT = 12, eyes = [];
+  function depthOf() {
+    const col = Math.max(0, Math.min(W - 1, Math.floor(player.x + player.w / 2)));
+    return player.y - surface[col];
+  }
+  function updateDread(dt) {
+    shakeT = Math.max(0, shakeT - dt);
+    const [pcx, pcy] = centre(player);
+    let near = Infinity;
+    for (const e of enemies) if (e.type === 'crawler') near = Math.min(near, Math.hypot(centre(e)[0] - pcx, centre(e)[1] - pcy));
+    if (near < 9) { if ((beatT -= dt) <= 0) { sfx.heartbeat(); beatT = 0.35 + near * 0.08; } }
+    else beatT = 0;
+    if (depthOf() <= 6) { eyes = []; return; }
+    if ((caveT -= dt) <= 0) {
+      caveT = 5 + Math.random() * 9;
+      const r = Math.random();
+      if (r < 0.6) sfx.drip();
+      else if (r < 0.9) { sfx.groan(); say('cave', { chance: 0.3, cooldown: 30 }); }
+      else { sfx.farScream(); say('cave', { chance: 0.6, cooldown: 30 }); }
+    }
+    if ((eyesT -= dt) <= 0) { eyesT = 9 + Math.random() * 10; spawnEyes(pcx, pcy); }
+    for (const ey of eyes) { ey.t += dt; if (Math.hypot(ey.x - pcx, ey.y - pcy) < 5 || ey.t > ey.life) ey.gone = true; }
+    eyes = eyes.filter(ey => !ey.gone);
+  }
+  function spawnEyes(pcx, pcy) {
+    for (let i = 0; i < 30; i++) {
+      const a = Math.random() * Math.PI * 2, d = 8 + Math.random() * 6;
+      const x = Math.floor(pcx + Math.cos(a) * d), y = Math.floor(pcy + Math.sin(a) * d);
+      if (!inWorld(x, y) || BLOCK[get(x, y)].solid || light[idx(x, y)] > 1) continue;
+      eyes.push({ x: x + 0.5, y: y + 0.5, t: 0, life: 3 + Math.random() * 3 });
+      say('cave', { chance: 0.35, cooldown: 20 });
+      return;
+    }
+  }
+  function drawEyes(cx, cy) {
+    for (const ey of eyes) {
+      if (ey.t % 1.7 > 1.55) continue; // blink
+      const fade = Math.max(0, Math.min(1, ey.t * 2, (ey.life - ey.t) * 2));
+      const x = Math.round(ey.x * TILE - cx), y = Math.round(ey.y * TILE - cy);
+      ctx.fillStyle = `rgba(232,226,210,${(0.85 * fade).toFixed(3)})`;
+      ctx.fillRect(x - 5, y, 3, 2); ctx.fillRect(x + 2, y, 3, 2);
+      ctx.fillStyle = `rgba(190,30,30,${(0.7 * fade).toFixed(3)})`;
+      ctx.fillRect(x - 4, y, 1, 1); ctx.fillRect(x + 3, y, 1, 1);
+    }
+  }
+  const caveDepthK = () => Math.max(0, Math.min(1, (depthOf() - 3) / 18));
+  function drawVignette() {
+    const k = caveDepthK();
+    if (k <= 0) return;
+    const px = (player.x + player.w / 2) * TILE - camera.x, py = (player.y + player.h / 2) * TILE - camera.y;
+    const g = ctx.createRadialGradient(px, py, 3 * TILE, px, py, 11 * TILE);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, `rgba(0,0,0,${(0.8 * k).toFixed(3)})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, viewW, viewH);
+  }
+
   // ---------- Enemies and combat ----------
   const ENEMY = {
     rat: { name: 'Big Minger', w: 0.9, h: 0.6, hp: 20, dmg: 6, speed: 2.7, jump: -9, drops: [['raw_meat', 1, 0.7]] },
@@ -1918,6 +2040,7 @@
         const saw = e.seesPlayer;
         e.seesPlayer = Math.hypot(dx, dy) < CHASE_RANGE && clearLine(ecx, e.y + e.h * 0.3, pcx, pcy, -1, -1);
         if (e.seesPlayer && !saw) say(e.type, { cooldown: 25, chance: e.type === 'crawler' ? 1 : 0.5 });
+        if (e.seesPlayer && !saw && e.type === 'crawler') { sfx.screech(); shakeT = 0.5; }
       }
       let dir, speed = d.speed;
       const fire = d.fearsFire ? nearestFire(ecx, ecy) : null;
@@ -1947,12 +2070,25 @@
           speed *= 1.2;
         } else if (dir && lightAt(ecx + dir * 0.9, ecy) >= BRIGHT) dir = 0;
       }
+      if (e.type === 'crawler' && !e.fleeing) {
+        // Bug-like movement: sudden darts, dead stops, and the odd twitch the wrong way.
+        e.jitT = (e.jitT || 0) - dt;
+        if (e.jitT <= 0) {
+          e.darting = !e.darting;
+          e.jitT = e.darting ? 0.1 + Math.random() * 0.25 : 0.05 + Math.random() * 0.35;
+          e.twitch = e.darting && Math.random() < 0.15;
+        }
+        speed *= e.darting ? 2.2 : 0.08;
+        if (e.twitch && dir) dir = -dir;
+      }
       if (e.feeding > 0) { e.feeding -= dt; dir = 0; }
       if (dir) e.face = dir;
       e.kb -= e.kb * Math.min(1, dt * 6);
       e.vx = dir * speed + e.kb;
       stepBody(e, dt);
-      if (e.blocked && e.onGround) {
+      if (e.type === 'crawler' && e.blocked && dir) {
+        e.vy = -6; // Peely-Wallies scuttle straight up walls
+      } else if (e.blocked && e.onGround) {
         // A wandering creature that stays stuck against a wall turns around instead of pushing into it.
         e.stuck = (e.stuck || 0) + dt;
         if (!e.seesPlayer && !e.fleeing && e.stuck > 0.6) { e.wander = -e.wander; e.wanderT = 2 + Math.random() * 3; e.stuck = 0; }
@@ -2220,6 +2356,7 @@
     sayGap -= dt;
     updateWeather(dt);
     checkBase(dt);
+    updateDread(dt);
     updateEnemies(dt);
     updateArrows(dt);
     updateAsh(dt);
@@ -2363,7 +2500,8 @@
   function render() {
     ctx.imageSmoothingEnabled = false;
     drawSky();
-    const cx = Math.round(camera.x), cy = Math.round(camera.y);
+    const shake = shakeT > 0 ? shakeT * 12 : 0;
+    const cx = Math.round(camera.x + (Math.random() - 0.5) * shake), cy = Math.round(camera.y + (Math.random() - 0.5) * shake);
     const x0 = Math.max(0, Math.floor(cx / TILE)), x1 = Math.min(W - 1, Math.floor((cx + viewW) / TILE));
     const y0 = Math.max(0, Math.floor(cy / TILE)), y1 = Math.min(H - 1, Math.floor((cy + viewH) / TILE));
 
@@ -2415,6 +2553,8 @@
     drawShade(x0, y0, x1, y1, cx, cy);
     drawFireGlow(x0, y0, x1, y1, cx, cy);
     drawWeather();
+    drawVignette();
+    drawEyes(cx, cy);
 
     // Target highlight and cracks
     if (mouse.over && !invOpen()) {
@@ -2478,12 +2618,13 @@
       shadeImg = shadeCtx.createImageData(lw, lh);
     }
     const d = shadeImg.data;
+    const shadeMax = 0.9 + 0.07 * caveDepthK(); // deep caves are nearly pitch black
     for (let j = 0; j < lh; j++) for (let i = 0; i < lw; i++) {
       const tx = Math.max(0, Math.min(W - 1, x0 - 1 + i)), ty = y0 - 1 + j;
       const L = ty < 0 ? 15 : ty >= H ? 0 : light[idx(tx, ty)];
       const k = (j * lw + i) * 4;
       d[k] = 6; d[k + 1] = 8; d[k + 2] = 12;
-      d[k + 3] = Math.round((1 - L / 15) * 0.9 * 255);
+      d[k + 3] = Math.round((1 - L / 15) * shadeMax * 255);
     }
     shadeCtx.putImageData(shadeImg, 0, 0);
     ctx.imageSmoothingEnabled = true;
@@ -2696,7 +2837,8 @@
     const moving = e.onGround && Math.abs(e.vx) > 0.2;
     const step = moving ? Math.sin(now / 70) * 2 : 0;
     if (e.onGround) groundShadow(x + w / 2, y + h, w / 2 + 2);
-    drawSprite(x + w / 2, y, e.face, e.flash, g => {
+    const jx = e.type === 'crawler' && Math.random() < 0.5 ? Math.round(Math.random() * 2 - 1) : 0; // bug-like shudder
+    drawSprite(x + w / 2 + jx, y, e.face, e.flash, g => {
       if (e.type === 'rat') paintRat(g, w, h, step, now);
       else if (e.type === 'crawler') paintCrawler(g, w, h, step, now, e);
       else if (e.type === 'haggis') paintHaggis(g, w, h, step, now, e);
@@ -2803,7 +2945,12 @@
 
   function paintCrawler(g, w, h, step, now, e) {
     const SK = '#ddd8cc', SH = '#aaa396', DK = '#7f786c', HI = '#f2efe6';
-    const L = -w / 2, jaw = e.fleeing ? 0 : (Math.sin(now / 120) + 1) * 1.2;
+    const L = -w / 2;
+    const jaw = e.fleeing ? 0 : e.seesPlayer ? 3 + Math.random() * 2 : (Math.sin(now / 120) + 1) * 1.2; // gapes when hunting
+    const sp = () => (Math.random() < 0.35 ? Math.round(Math.random() * 4 - 2) : 0);            // limb spasms
+    step += sp();
+    // long spindly far limbs reaching past the body
+    R(g, DK, L - 3 + sp(), h - 10, 5, 2); R(g, DK, w / 2 + 1 + sp(), h - 14, 4, 2);
     // far limbs (darker)
     R(g, DK, L + 2 - step, h - 13, 3, 6); R(g, DK, L + 4 - step, h - 8, 3, 8);   // back leg
     R(g, DK, w / 2 - 7 + step, h - 16, 3, 16);                                   // front arm
@@ -2820,7 +2967,8 @@
     R(g, SH, w / 2 - 9, h - 31, 2, 10);
     R(g, '#0c0b0a', w / 2 - 2, h - 28, 3, 3);                                    // empty eye socket
     R(g, '#0c0b0a', w / 2 - 3, h - 23 + jaw * 0.3, 6, 1 + jaw);                  // gaping mouth
-    R(g, '#e8e2c8', w / 2 - 2, h - 23, 1, 1); R(g, '#e8e2c8', w / 2 + 1, h - 23, 1, 1);
+    if (jaw > 2) R(g, '#6e1f1f', w / 2 - 2, h - 22, 4, jaw - 1);                   // raw red throat
+    for (let i = 0; i < 3; i++) { R(g, '#e8e2c8', w / 2 - 3 + i * 2, h - 23, 1, 1); R(g, '#e8e2c8', w / 2 - 2 + i * 2, h - 22 + jaw, 1, 1); } // needle teeth
     // near limbs: bent hind leg and a long clawed arm
     R(g, SK, L + 5 + step, h - 14, 3, 6); R(g, SK, L + 3 + step, h - 8, 3, 8);
     R(g, SK, w / 2 - 3 - step, h - 17, 3, 17);
@@ -3122,6 +3270,7 @@
     const rows = [];
     for (const r of RECIPES) {
       if (craftFilter !== 'All' && ITEM[r.out].cat !== craftFilter) continue;
+      if (outclassed(r.out)) continue; // hide gear you've already outgrown
       let row = rows.find(x => x.out === r.out);
       if (!row) rows.push(row = { out: r.out, options: [] });
       row.options.push(r);
