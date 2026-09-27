@@ -133,7 +133,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 
 #toast {
   position: fixed; left: 50%; transform: translateX(-50%);
-  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 152px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 174px);
   padding: 6px 12px; border-radius: 4px;
   background: var(--panel); border: 2px solid var(--edge);
   opacity: 0; transition: opacity .2s; pointer-events: none;
@@ -180,7 +180,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 
 #touch {
   position: fixed; left: 16px; right: 16px;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 150px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--slot) + 172px);
   display: flex; justify-content: space-between; pointer-events: none;
 }
 #touch .pad { display: flex; gap: 8px; pointer-events: auto; }
@@ -269,6 +269,14 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 #weather-row[data-kind="rain"] #weather-text { color: #8fc3e6; }
 #weather-row[data-kind="heat"] #weather-text { color: #ff9a4e; }
 
+/* Bru Rush buff */
+#buff-row { display: flex; gap: 8px; align-items: baseline; font-size: 13px; padding-bottom: 2px; border-bottom: 1px solid var(--edge); }
+#buff-row .label { font-size: 11px; min-width: 7.5ch; color: #6fb3de; }
+#buff-text { color: #ff9a4e; font-weight: 600; }
+#stamina.bru #stamina-fill { background: linear-gradient(90deg, #e0772a, #1f5fae, #e0772a); background-size: 200% 100%; animation: bru 1.2s linear infinite; }
+#health-fill.bru { background: linear-gradient(#ff9a4e, #e0772a); }
+@keyframes bru { to { background-position: 200% 0; } }
+
 /* Tips beside the goal */
 .hud-left { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
 #tips {
@@ -282,7 +290,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 #tip-line.fade { opacity: 0; }
 @media (max-width: 640px) { #tips { display: none; } }
 
-@media (prefers-reduced-motion: reduce) { #toast, #health-fill, #tip-line { transition: none; } #stamina.empty .track { animation: none; } #radio.in { animation: none; } }
+@media (prefers-reduced-motion: reduce) { #toast, #health-fill, #tip-line { transition: none; } #stamina.empty .track { animation: none; } #radio.in { animation: none; } #stamina.bru #stamina-fill { animation: none; } }
 
 /* New-world story */
 #story {

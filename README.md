@@ -50,7 +50,7 @@ Every item belongs to a category, shown as a coloured corner on inventory slots 
 | Category | Examples |
 | --- | --- |
 | Equipment | pickaxes, hatchets, daggers, bows, arrows |
-| Health | Wee Berries (+10 health, +15 food), Rat Piece (cooked meat: +25 health, +40 food), Big Plaster (+30 health) |
+| Health | Irn Bru (Bru Rush), Wee Berries (+10 health, +15 food), Rat Piece (cooked meat: +25 health, +40 food), Big Plaster (+30 health) |
 | Resources | logs, oak logs, sticks, fibre, string, rope, coal, iron, scrap metal, raw meat |
 | Building | dirt, planks, cobblestone, bricks, glass, torches, ladders, workbench, furnace |
 
@@ -66,10 +66,11 @@ Leaves and bushes drop fibre. Each piece of fibre has a 50% chance of coming wit
 
 - You have **100 health**. **Big Mingers** (mutant rats) and **Bawheids** (ghouls) roam the surface and dark caves and hurt you on contact. Falls of more than 4 blocks also hurt.
 - Creatures wander at random and only chase you when you're within about 10 blocks and nothing solid blocks their view.
-- **Peely-Wallies** are pale, blind cave dwellers that spawn deep underground in the dark. They run from fire: placed torches, Wee Fires and furnaces, or a torch in your hand.
+- **Peely-Wallies** are pale, blind cave dwellers. They lurk in the twilight zone, the first dark caves below where daylight fades (about 14–32 blocks down), even while you're on the surface. They hunt Tam, or rats if Tam isn't in sight, but won't step into bright light (except under an Ash Cloud) and run from fire: placed torches, Wee Fires and furnaces, or a torch in your hand.
 - Big Mingers drop raw meat. Cook it into a **Rat Piece** on a **Wee Fire** (3 logs, 2 sticks) or in a furnace. Bawheids and Peely-Wallies drop string and rope.
 - You also have **100 stamina**. Jumps (8), each tool swing (2), dagger hits (8) and bow shots (10) use it; walking doesn't. It refills after you rest for about a second.
 - Your **food** bar drains slowly (a full stomach lasts about 20 minutes). At 0 you start starving and lose 2 health every 4 seconds. Raw meat gives +10 food but makes you sick; cook it first.
+- **Irn Bru machines** sit in sealed brick rooms deep underground (25+ blocks down) and glow in the dark. Right click one for 3 cans. A can gives a **Bru Rush**: unlimited stamina and +50 health (max 150) for 60 seconds.
 - At 0 health you wake up back at the start and keep your items.
 
 ### Weather

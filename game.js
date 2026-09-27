@@ -41,7 +41,7 @@
     AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, COBBLE: 4, LOG: 5, LEAVES: 6, PLANK: 7,
     COAL_ORE: 8, IRON_ORE: 9, SAND: 10, BENCH: 11, FURNACE: 12, BRICK: 13,
     GLASS: 14, TORCH: 15, LADDER: 16, BEDROCK: 17, BUSH: 18,
-    OAK_LOG: 19, OAK_LEAVES: 20, CHEST: 21, SCRAP: 22, ASH: 23, CAMPFIRE: 24,
+    OAK_LOG: 19, OAK_LEAVES: 20, CHEST: 21, SCRAP: 22, ASH: 23, CAMPFIRE: 24, VENDING: 25, VENDING_EMPTY: 26,
   };
   // hard: seconds to mine by hand. tier: tool tier needed (any pickaxe or hatchet counts).
   // pref: the tool that mines it at full speed ('pick' or 'axe'); other tools still help a little.
@@ -76,6 +76,9 @@
   def(B.CHEST, { name: 'Supply Chest', solid: false, hard: 1, pref: 'axe', cost: 1, sky: true });
   def(B.SCRAP, { name: 'Scrap Metal', hard: 1.6, tier: 1, pref: 'pick', drop: 'scrap' });
   def(B.ASH, { name: 'Ash', hard: 0.4, drop: 'dirt' });
+  // Irn Bru machines sit in old rooms deep underground. Right click for cans; empty ones can be broken for scrap.
+  def(B.VENDING, { name: 'Irn Bru Machine', solid: false, hard: 2, tier: 1, pref: 'pick', drop: 'scrap', dropN: 2, light: 7, cost: 1, sky: true });
+  def(B.VENDING_EMPTY, { name: 'Empty Irn Bru Machine', solid: false, hard: 2, tier: 1, pref: 'pick', drop: 'scrap', dropN: 2, cost: 1, sky: true });
   def(B.CAMPFIRE, { name: 'Wee Fire', solid: false, hard: 0.8, pref: 'axe', drop: 'campfire', light: 13, cost: 1, sky: true });
 
   // ---------- Items ----------
@@ -107,6 +110,7 @@
     berries: { name: 'Wee Berries', heal: 10, food: 15, cat: 'Health' },
     cooked_meat: { name: 'Rat Piece', heal: 25, food: 40, cat: 'Health' },
     bandage: { name: 'Big Plaster', heal: 30, cat: 'Health' },
+    irn_bru: { name: 'Irn Bru', bru: 60, cat: 'Health' },
     wood_pick: { name: 'Wooden Pickaxe', tool: 'pick', tier: 1, speed: 2.5 },
     stone_pick: { name: 'Stone Pickaxe', tool: 'pick', tier: 2, speed: 4.5 },
     iron_pick: { name: 'Iron Pickaxe', tool: 'pick', tier: 3, speed: 7 },
@@ -138,6 +142,7 @@
     if (it.bow) return `Shoots arrows${it.bonus ? ` · +${it.bonus} damage` : ''}`;
     if (it.arrow) return `Arrow damage ${it.arrow}`;
     if (it.sick) return `+${it.food} food, but eating it raw hurts ${it.sick} · cook it first`;
+    if (it.bru) return `Bru Rush: unlimited stamina and +${BRU_HP} health for ${it.bru}s · right click to drink`;
     if (it.heal || it.food) return [it.heal && `Heals ${it.heal}`, it.food && `+${it.food} food`].filter(Boolean).join(' · ') + ' · right click to use';
     if (it.block) return 'Right click to place';
     return '';
@@ -340,6 +345,22 @@
           p.px(5, 6, '#ff8a2b', 6, 5); p.px(6, 4, '#ff8a2b', 4, 2); p.px(7, 2, '#ff8a2b', 2, 2);
           p.px(6, 7, '#ffcc4d', 4, 4); p.px(7, 5, '#ffcc4d', 2, 2); p.px(7, 8, '#fff3b0', 2, 2);
           break;
+        case B.VENDING: case B.VENDING_EMPTY: {
+          const on = id === B.VENDING;
+          p.px(1, 0, on ? '#e0772a' : '#6a6c72', 14, 16);          // body
+          p.px(1, 0, on ? '#f39a4e' : '#8b8d93', 14, 1);
+          p.px(1, 0, on ? '#b85a1c' : '#4a4c52', 1, 16); p.px(14, 0, on ? '#b85a1c' : '#4a4c52', 1, 16);
+          p.px(2, 2, on ? '#1f5fae' : '#3a3c42', 12, 3);          // blue logo band
+          if (on) { p.px(3, 3, '#f4efe6', 3, 1); p.px(7, 3, '#f4efe6', 2, 1); p.px(10, 3, '#f4efe6', 3, 1); }
+          p.px(2, 6, on ? '#1b2a3a' : '#16171a', 8, 7);           // window
+          if (on) for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+            p.px(3 + c * 2 + (c > 0 ? c - 1 : 0), 7 + r * 2, '#e0772a', 1, 1); p.px(3 + c * 2 + (c > 0 ? c - 1 : 0), 8 + r * 2, '#1f5fae', 1, 1);
+          }
+          p.px(11, 6, on ? '#2a2a2e' : '#1e1f22', 2, 4);          // coin slot panel
+          p.px(11, 7, on ? '#e8b83a' : '#3a3c42', 2, 1);
+          p.px(2, 14, '#16171a', 12, 1);                           // can tray
+          break;
+        }
         case B.ASH: p.fill('#4a4744'); p.speckle(['#5d5955', '#383634', '#6a6560'], 0.45); break;
         case B.BUSH:
           p.px(2, 7, '#5a7a30', 12, 9); p.px(4, 5, '#5a7a30', 8, 2); p.px(1, 10, '#5a7a30', 14, 6);
@@ -539,6 +560,12 @@
             p.px(11, 3, it.tip, 3, 3); p.px(13, 2, it.tip);
             p.px(2, 11, '#e8e2c8', 2, 2); p.px(4, 13, '#e8e2c8', 2, 2);
             break;
+          case 'irn_bru':
+            p.px(5, 2, '#b4babf', 6, 1);                             // lid
+            p.px(4, 3, '#e0772a', 8, 11); p.px(4, 3, '#f39a4e', 2, 11); p.px(10, 3, '#b85a1c', 2, 11);
+            p.px(4, 6, '#1f5fae', 8, 4); p.px(5, 7, '#f4efe6', 6, 1); p.px(6, 8, '#f4efe6', 4, 1);
+            p.px(5, 14, '#8b8d93', 6, 1);
+            break;
           case 'fibre':
             p.line(3, 14, 9, 2, '#9cc36a'); p.line(6, 14, 10, 2, '#b6d884'); p.line(9, 14, 12, 3, '#86b057');
             p.line(12, 14, 13, 4, '#9cc36a'); p.px(4, 8, '#c8a86a', 9, 2);
@@ -691,6 +718,23 @@
       else if (r > 0.97 && !nearSpawn(x)) set(x, h - 1, B.CHEST);
       else if (r > 0.93) set(x, h - 1, B.SCRAP);
     }
+
+    // Old Irn Bru machines, sealed in small brick rooms deep underground: a reward for digging down.
+    const machines = [];
+    for (let tries = 0; tries < 500 && machines.length < 6; tries++) {
+      const x = 8 + Math.floor(rnd() * (W - 16));
+      const top = surface[x] + 26;
+      if (top >= H - 8) continue;
+      const y = top + Math.floor(rnd() * (H - 8 - top));
+      if (machines.some(mx => Math.abs(mx - x) < 24)) continue;
+      for (let dx = -4; dx <= 4; dx++) for (let dy = -4; dy <= 0; dy++) {
+        const wall = Math.abs(dx) === 4 || dy === -4 || dy === 0;
+        set(x + dx, y + dy, wall ? B.BRICK : B.AIR);
+      }
+      set(x, y - 1, B.VENDING);
+      machines.push(x);
+    }
+    worldInfo.machines = machines.length;
     scanChests();
   }
 
@@ -865,6 +909,7 @@
     ['furnace', 'Craft a Furnace from 8 Cobblestone.'],
     ['iron_ingot', 'Smelt an Iron Ingot from iron ore or 3 scrap metal at a Furnace.'],
     ['iron_pick', 'Make Rope from String, then craft an Iron Pickaxe.'],
+    ['irn_bru', 'Dig deep underground and find an Irn Bru machine. They glow in the dark. Right click one for cans.'],
   ];
   function markProgress() { for (const [id] of GOALS) if (ITEM[id] && count(id) > 0) progress[id] = true; }
   function currentGoal() {
@@ -993,6 +1038,8 @@
       enemyDie: () => play(v => { tone({ freq: 420 * v, to: 90, dur: 0.3, type: 'sawtooth', gain: 0.1 }); noise({ type: 'lowpass', freq: 600, dur: 0.2, gain: 0.3 }); }),
       bow: () => play(v => { tone({ freq: 190 * v, to: 110, dur: 0.12, type: 'triangle', gain: 0.3 }); noise({ type: 'highpass', freq: 2500, dur: 0.07, gain: 0.12 }); }),
       radio: () => play(() => { noise({ type: 'bandpass', freq: 2400, q: 0.7, dur: 0.18, gain: 0.12 }); tone({ freq: 1200, dur: 0.05, type: 'square', gain: 0.02, delay: 0.2 }); }),
+      vend: () => play(() => { tone({ freq: 140, to: 90, dur: 0.12, type: 'square', gain: 0.1 }); noise({ type: 'lowpass', freq: 500, dur: 0.1, gain: 0.4, delay: 0.15 }); tone({ freq: 90, dur: 0.1, type: 'triangle', gain: 0.3, delay: 0.3 }); }),
+      fizz: () => play(() => { noise({ type: 'highpass', freq: 3500, dur: 0.5, gain: 0.25 }); tone({ freq: 700, to: 1100, dur: 0.12, gain: 0.08, delay: 0.05 }); }),
       denied: () => play(() => tone({ freq: 160, to: 120, dur: 0.14, type: 'square', gain: 0.05 })),
       click: () => play(() => tone({ freq: 900, dur: 0.03, type: 'square', gain: 0.03 })),
     };
@@ -1198,8 +1245,41 @@
 
   const MAX_HP = 100;
   function heal(n) {
-    player.hp = Math.min(MAX_HP, player.hp + n);
+    player.hp = Math.min(maxHp(), player.hp + n);
     uiDirty = true;
+  }
+
+  // ---------- Irn Bru ----------
+  // A can gives a Bru Rush: unlimited stamina and +50 extra health for a minute.
+  const BRU_HP = 50;
+  let bruT = 0;
+  const maxHp = () => MAX_HP + (bruT > 0 ? BRU_HP : 0);
+  function drinkBru(secs) {
+    bruT = secs;
+    player.hp = Math.min(maxHp(), player.hp + BRU_HP);
+    player.st = MAX_ST;
+    uiDirty = true;
+    say('bru', { force: true });
+  }
+  function updateBru(dt) {
+    if (bruT <= 0) return;
+    bruT -= dt;
+    player.st = MAX_ST;
+    if (bruT <= 0) {
+      player.hp = Math.min(player.hp, MAX_HP);
+      uiDirty = true;
+      say('bruEnd', { force: true });
+      toast('The Bru Rush has worn off.');
+    }
+  }
+  function openVending(tx, ty) {
+    tiles[idx(tx, ty)] = B.VENDING_EMPTY;
+    addItem('irn_bru', 3);
+    didAction('vend');
+    sfx.vend();
+    say('vending', { force: true });
+    toast('The machine clunks out 3 cans of Irn Bru. Select one and right click to drink.', 4000);
+    computeLight();
   }
   function hurt(n, cause = 'hurt') {
     player.hp = Math.max(0, player.hp - n);
@@ -1209,6 +1289,7 @@
     if (player.hp > 0) say(cause, { cooldown: 6 });
     if (player.hp === 0) {
       spawn();
+      bruT = 0;
       player.hp = MAX_HP;
       player.st = MAX_ST;
       player.food = Math.max(player.food, 60);
@@ -1246,6 +1327,9 @@
     heat: ['Taps aff!', "Pure roastin'!", "It's like Magaluf oot here."],
     respawn: ["Whit happened? Ah feel like ah've been hit by a bus.", "Ah'm back. Nae thanks tae you."],
     craftTool: ['Look at that. Pure craftsmanship.', "Ah'm basically an engineer noo."],
+    vending: ['A Bru machine! Ya dancer!', "Is that… is that whit ah think it is?", 'Hallelujah!'],
+    bru: ['Mad fur it!', 'Pure rocket fuel, this.', 'Ah can see through time!'],
+    bruEnd: ["Aw, the Bru's worn aff.", 'Need another can. Or ten.'],
   };
   const RADIO = {
     hello: ["Tam, is that you? It's Wee Davie in the other bunker. Keep yer radio on, ah'll tell ye when the weather's turnin'."],
@@ -1279,9 +1363,10 @@
   // Food and medicine: `heal` restores health, `food` fills hunger, `sick` hurts (raw meat).
   function eat(it) {
     const f = ITEM[it.id];
-    const helps = (f.heal && player.hp < MAX_HP) || (f.food && player.food < MAX_FOOD);
+    const helps = f.bru || (f.heal && player.hp < maxHp()) || (f.food && player.food < MAX_FOOD);
     if (!helps) { toast(f.food ? "You're not hungry and your health is full" : 'Your health is already full'); return; }
     removeItem(it.id, 1);
+    if (f.bru) { sfx.fizz(); drinkBru(f.bru); toast(`Bru Rush! Unlimited stamina and +${BRU_HP} health for ${f.bru} seconds.`); return; }
     sfx.eat();
     didAction('eat');
     const parts = [];
@@ -1489,7 +1574,7 @@
       if (y < 1 || BLOCK[get(x, y)].solid) return;
       while (y < H && !BLOCK[get(x, y)].solid) y++;
       if (light[idx(x, y - 1)] > 6) return;
-      if (y > surface[x] + 6) type = Math.random() < 0.75 ? 'crawler' : 'rat'; // deep underground
+      if (y > surface[x] + 6) type = Math.random() < 0.5 ? 'crawler' : 'rat'; // deep underground
       else type = Math.random() < 0.5 ? 'rat' : 'ghoul';
     }
     const d = ENEMY[type];
@@ -1500,9 +1585,37 @@
     enemies.push(e);
   }
 
+  // Peely-Wallies lurk in the twilight zone: the first dark stretch of cave below where daylight fades.
+  // They spawn there even while Tam is on the surface, sometimes with a rat nearby for them to hunt.
+  const MAX_CRAWLERS = 3, BRIGHT = 9;
+  let crawlerT = 12;
+  function trySpawnCrawler() {
+    if (enemies.filter(e => e.type === 'crawler').length >= MAX_CRAWLERS || enemies.length >= MAX_ENEMIES + 2) return;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const x = Math.floor(player.x + side * (10 + Math.random() * 22));
+      if (x < 1 || x >= W - 1) continue;
+      for (let y = surface[x] + 2; y < Math.min(H - 2, surface[x] + 32); y++) {
+        if (BLOCK[get(x, y)].solid || !BLOCK[get(x, y + 1)].solid) continue;
+        const L = light[idx(x, y)];
+        if (L > 4) continue;                // still too bright
+        if (Math.hypot(x - player.x, y - player.y) < 8) break;
+        const type = Math.random() < 0.3 ? 'rat' : 'crawler';
+        const d = ENEMY[type];
+        const e = { type, x: x + 0.5 - d.w / 2, y: y + 1 - d.h - 0.01, w: d.w, h: d.h, vx: 0, vy: 0, kb: 0,
+          hp: d.hp, max: d.hp, face: -side, flash: 0, wander: 0, wanderT: 0, onGround: false };
+        if (boxHits(e.x, e.y, e.w, e.h) || (d.fearsFire && nearestFire(x + 0.5, y) !== null)) break;
+        enemies.push(e);
+        return;
+      }
+    }
+  }
+  const lightAt = (x, y) => inWorld(Math.floor(x), Math.floor(y)) ? light[idx(Math.floor(x), Math.floor(y))] : 0;
+
   function updateEnemies(dt) {
     spawnTimer -= dt;
     if (spawnTimer <= 0) { spawnTimer = 5 + Math.random() * 4; trySpawn(); }
+    if ((crawlerT -= dt) <= 0) { crawlerT = 6 + Math.random() * 4; trySpawnCrawler(); }
     const [pcx, pcy] = centre(player);
     for (const e of enemies) {
       const d = ENEMY[e.type];
@@ -1519,13 +1632,32 @@
       let dir, speed = d.speed;
       const fire = d.fearsFire ? nearestFire(ecx, ecy) : null;
       e.fleeing = fire !== null;
+      // Peely-Wallies hunt Tam, or a rat if Tam isn't in sight.
+      let prey = null;
+      if (e.type === 'crawler' && !e.seesPlayer) {
+        let best = 10;
+        for (const o of enemies) {
+          if (o.type !== 'rat' || o.dead) continue;
+          const dist = Math.hypot(centre(o)[0] - ecx, centre(o)[1] - ecy);
+          if (dist < best) { best = dist; prey = o; }
+        }
+      }
       if (e.fleeing) { dir = ecx < fire ? -1 : 1; speed *= 1.3; } // run away from the flames
       else if (e.seesPlayer) dir = Math.abs(dx) > 0.3 ? Math.sign(dx) : 0; // chase
+      else if (prey) dir = Math.sign(centre(prey)[0] - ecx) || 0;
       else {
         e.wanderT -= dt;
         if (e.wanderT <= 0) { e.wander = [-1, 0, 1][(Math.random() * 3) | 0]; e.wanderT = 2 + Math.random() * 3; }
         dir = e.wander;
       }
+      // Peely-Wallies won't step into bright light (except under an ash cloud); caught in it, they back into the dark.
+      if (e.type === 'crawler' && !e.fleeing && !weatherOn('ash')) {
+        if (lightAt(ecx, ecy) >= BRIGHT) {
+          dir = lightAt(ecx - 2, ecy) <= lightAt(ecx + 2, ecy) ? -1 : 1;
+          speed *= 1.2;
+        } else if (dir && lightAt(ecx + dir * 0.9, ecy) >= BRIGHT) dir = 0;
+      }
+      if (e.feeding > 0) { e.feeding -= dt; dir = 0; }
       if (dir) e.face = dir;
       e.kb -= e.kb * Math.min(1, dt * 6);
       e.vx = dir * speed + e.kb;
@@ -1542,6 +1674,20 @@
         player.kb = Math.sign(dx || 1) * 9;
         player.vy = -5;
         hurt(d.dmg);
+      }
+      if (prey && overlaps(e, prey)) {
+        e.biteT = (e.biteT || 0) - dt;
+        if (e.biteT <= 0) {
+          e.biteT = 0.8;
+          prey.hp -= 12;
+          prey.flash = 0.15;
+          if (prey.hp <= 0) {
+            prey.dead = true;
+            e.hp = e.max;
+            e.feeding = 2;
+            floaters.push({ x: ecx, y: e.y, text: '*crunch*', col: '#d9d4c8', t: 1.2 });
+          }
+        }
       }
       if (Math.abs(dx) > 60 || e.y > H) e.dead = true;
     }
@@ -1583,6 +1729,7 @@
   const ST_COST = { jump: 8, swing: 2, melee: 8, bow: 10 };
   let staminaWait = 0, tiredToastT = 0;
   function spend(what) {
+    if (bruT > 0) return true; // Bru Rush: unlimited stamina
     const n = ST_COST[what];
     if (player.st < n) {
       if (tiredToastT <= 0) {
@@ -1748,10 +1895,13 @@
       }
     } else mining.t = 0;
 
-    const food = held() && (ITEM[held().id].heal || ITEM[held().id].food);
+    const food = held() && (ITEM[held().id].heal || ITEM[held().id].food || ITEM[held().id].bru);
     if (mouse.right && !invOpen() && t.visible && get(t.tx, t.ty) === B.CHEST && placeCooldown <= 0) {
       placeCooldown = 0.4;
       openChest(t.tx, t.ty);
+    } else if (mouse.right && !invOpen() && t.visible && get(t.tx, t.ty) === B.VENDING && placeCooldown <= 0) {
+      placeCooldown = 0.4;
+      openVending(t.tx, t.ty);
     } else if (mouse.right && !invOpen() && food && placeCooldown <= 0) {
       placeCooldown = 0.4;
       eat(held());
@@ -1772,6 +1922,7 @@
 
     updateStamina(dt);
     updateHunger(dt);
+    updateBru(dt);
     speech.t -= dt;
     sayGap -= dt;
     updateWeather(dt);
@@ -1994,13 +2145,14 @@
 
   // Small gold + that replaces the mouse pointer over the world.
   function drawCrosshair(x, y) {
-    x = Math.round(x); y = Math.round(y);
-    ctx.fillStyle = 'rgba(20,16,8,0.7)';
-    ctx.fillRect(x - 6, y - 2, 12, 4);
-    ctx.fillRect(x - 2, y - 6, 4, 12);
+    ctx.beginPath();
+    ctx.arc(Math.round(x), Math.round(y), 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(20,16,8,0.75)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(Math.round(x), Math.round(y), 2.5, 0, Math.PI * 2);
     ctx.fillStyle = '#e8b83a';
-    ctx.fillRect(x - 5, y - 1, 10, 2);
-    ctx.fillRect(x - 1, y - 5, 2, 10);
+    ctx.fill();
   }
 
   // Darkness: one pixel per tile, scaled up with smoothing so light fades softly across tiles.
@@ -2033,6 +2185,16 @@
     ctx.globalCompositeOperation = 'lighter';
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
       const b = tiles[idx(x, y)];
+      if (b === B.VENDING) { // a full Irn Bru machine glows so it stands out in the dark
+        const gx = (x + 0.5) * TILE - cx, gy = (y + 0.5) * TILE - cy, r = 2.6 * TILE;
+        const glow = ctx.createRadialGradient(gx, gy, 2, gx, gy, r);
+        glow.addColorStop(0, 'rgba(255,140,50,0.35)');
+        glow.addColorStop(0.5, 'rgba(60,120,220,0.12)');
+        glow.addColorStop(1, 'rgba(60,120,220,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(gx - r, gy - r, r * 2, r * 2);
+        continue;
+      }
       if (b !== B.TORCH && b !== B.CAMPFIRE && b !== B.FURNACE) continue;
       const gx = (x + 0.5) * TILE - cx, gy = (y + (b === B.TORCH ? 0.25 : 0.6)) * TILE - cy;
       const flick = 1 + Math.sin(now * 9 + x * 3.1) * 0.05 + Math.sin(now * 23 + y) * 0.03;
@@ -2424,6 +2586,17 @@
   let shownSt = -1, shownFood = -1, shownWeather = '';
   const weatherText = document.getElementById('weather-text'), weatherRow = document.getElementById('weather-row');
   const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  const buffRow = document.getElementById('buff-row'), buffText = document.getElementById('buff-text');
+  let shownBuff = '';
+  function drawBuffChip() {
+    const text = bruT > 0 ? `Bru Rush · ${Math.ceil(bruT)}s` : '';
+    if (text === shownBuff) return;
+    shownBuff = text;
+    buffRow.hidden = !text;
+    buffText.textContent = text;
+    staminaEl.classList.toggle('bru', !!text);
+    if (!text) uiDirty = true;
+  }
   function drawWeatherChip() {
     let text, cls = weather.kind;
     if (weather.kind === 'clear') {
@@ -2488,6 +2661,9 @@
     'Iron ore is deep doon an\' needs a stone tool or better.',
     'Ruins often hide a supply chest behind the broken walls.',
     'Press E for yer inventory an\' crafting.',
+    "Rumour has it there's Irn Bru machines deep underground. Worth the dig.",
+    'A can o\' Irn Bru gives ye unlimited stamina an\' 50 extra health for a minute.',
+    "Peely-Wallies hide just below where the daylight stops. They'll no come oot intae the light.",
   ];
   const tipLine = document.getElementById('tip-line');
   let tipIndex = Math.floor(Math.random() * TIPS.length), tipTimer = 0;
@@ -2697,9 +2873,10 @@
     renderHotbar();
     if (invOpen()) renderInventory();
     goalEl.textContent = currentGoal();
-    healthFill.style.width = `${player.hp}%`;
+    healthFill.style.width = `${player.hp / maxHp() * 100}%`;
+    healthFill.classList.toggle('bru', bruT > 0);
     healthFill.classList.toggle('low', player.hp <= 30);
-    healthText.textContent = `${player.hp} / ${MAX_HP}`;
+    healthText.textContent = `${player.hp} / ${maxHp()}`;
     healthEl.setAttribute('aria-valuenow', player.hp);
     uiDirty = false;
   }
@@ -2781,13 +2958,15 @@
     } else if (t.inReach) {
       const b = get(t.tx, t.ty);
       if (b === B.CHEST && t.visible && !knows('chest')) list.push(['Right click', 'Open chest']);
+      if (b === B.VENDING && t.visible && !knows('vend')) list.push(['Right click', 'Get Irn Bru']);
       if (b !== B.AIR && b !== B.BEDROCK) {
         const chop = BLOCK[b].pref === 'axe';
         if (!t.visible) list.push(['', 'Something is in the way']);
         else if (!knows(chop ? 'chop' : 'mine')) list.push(['Left click', `${chop ? 'Chop' : 'Mine'} ${BLOCK[b].name}`]);
       } else if (b === B.AIR && it && it.block && hasSupport(t.tx, t.ty) && !knows('place')) list.push(['Right click', `Place ${it.name}`]);
     }
-    if (it && (it.heal || it.food) && !knows('eat')) list.push(['Right click', it.id === 'bandage' ? 'Use Big Plaster' : `Eat ${it.name}`]);
+    if (it && it.bru && !knows('eat')) list.push(['Right click', 'Drink Irn Bru']);
+    else if (it && (it.heal || it.food) && !knows('eat')) list.push(['Right click', it.id === 'bandage' ? 'Use Big Plaster' : `Eat ${it.name}`]);
     return list.slice(0, 2);
   }
   function coachPrompts() {
@@ -2842,6 +3021,7 @@
       ['Ruined buildings', d.ruins],
       ['Blast craters', d.craters],
       ['Oak trees standing', d.oaks],
+      ['Irn Bru machines', 'somewhere doon below'],
       ['Pals', 'nane'],
       ['Scran', "dunno, go an' look"],
     ];
@@ -2906,6 +3086,7 @@
     inv = new Array(INV_SIZE).fill(null);
     progress = {};
     selected = 0;
+    bruT = 0;
     player.hp = MAX_HP;
     player.st = MAX_ST;
     player.food = MAX_FOOD;
@@ -2948,6 +3129,7 @@
       drawStaminaBar();
       drawFoodBar();
       drawWeatherChip();
+      drawBuffChip();
       updatePrompts();
       requestAnimationFrame(frame);
     }
