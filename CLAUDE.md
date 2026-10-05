@@ -58,6 +58,7 @@ UI stays dark and muted so loot colours are the brightest things on screen. Mono
 ## Commands
 - `npm install` then `npm run dev` → http://localhost:5173 (debug panel button bottom right)
 - `npm test` · `npm run typecheck` · `npm run build`
+- `npm run build:play` → single-file `dist-play/wiped.html` with debug on, for the playtest link
 
 ## Layout
 - `src/data/` balance and text: tiers, items, upgrades and spots, config, Nobody's lines

@@ -14,6 +14,10 @@ npm run dev
 Open http://localhost:5173. The orange **DEBUG** button (bottom right) opens the debug panel.
 To try it on your phone, open the "Network" URL Vite prints while on the same Wi-Fi.
 
+## Shareable build
+
+`npm run build:play` writes `dist-play/wiped.html`: the whole game in one file, with the debug panel switched on.
+
 ## Tune balance
 
 Everything lives in `src/data/`:

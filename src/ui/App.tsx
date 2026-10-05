@@ -11,8 +11,11 @@ import { Upgrades } from './Upgrades';
 
 type Tab = 'feed' | 'bag' | 'upgrades';
 
-// Debug panel shows in dev builds, or in any build with ?debug in the URL.
-const DEBUG_ENABLED = import.meta.env.DEV || new URLSearchParams(location.search).has('debug');
+// Debug panel shows in dev builds, builds made with VITE_DEBUG=true, or with ?debug in the URL.
+const DEBUG_ENABLED =
+  import.meta.env.DEV ||
+  import.meta.env.VITE_DEBUG === 'true' ||
+  new URLSearchParams(location.search).has('debug');
 
 export function App() {
   const game = useGame((s) => s.game);
