@@ -1,130 +1,118 @@
-import type { ItemDef } from '../game/types';
+import type { ItemBase } from '../game/types';
 
-// Scrapper-stage loot. Every tier needs at least one item.
-// value = Tokens per item when sold. weight = chance within its tier (default 1).
-export const ITEMS: ItemDef[] = [
-  // Old Tech
-  {
-    id: 'floppy-disk',
-    name: 'Floppy Disk',
-    tier: 'old',
-    value: 1,
-    weight: 1.5,
-    description: 'Holds 1.44MB, roughly a third of a cat photo. Priceless.',
-  },
-  {
-    id: 'ball-mouse',
-    name: 'Ball Mouse',
-    tier: 'old',
-    value: 1,
-    weight: 1.5,
-    description: 'Comes with a free ball of hair. Please do not ask whose.',
-  },
-  {
-    id: 'dial-up-modem',
-    name: 'Dial-up Modem',
-    tier: 'old',
-    value: 2,
-    description: 'Makes a noise like a robot being strangled. Peak technology.',
-  },
-  {
-    id: 'beige-processor',
-    name: 'Beige Processor Chip',
-    tier: 'old',
-    value: 2,
-    description: 'Ran a whole office in 1998. Now it struggles to run my self-esteem.',
-  },
-  {
-    id: 'flip-phone',
-    name: 'Flip Phone',
-    tier: 'old',
-    value: 3,
-    weight: 0.7,
-    description: 'Snaps shut like you just ended an important call. You never had one.',
-  },
+// Item names and jokes. Every tier needs at least one item per slot.
+// Stats are not set here: they come from the tier, slot and item level (see gear.ts).
+export const ITEM_BASES: ItemBase[] = [
+  // ---- Old Tech ----
+  { id: 'bent-pipe', name: 'Bent Pipe', slot: 'weapon', tier: 'old', look: 'pipe',
+    description: "Started life as plumbing. Now it's a career." },
+  { id: 'rusty-wrench', name: 'Rusty Wrench', slot: 'weapon', tier: 'old', look: 'wrench',
+    description: 'Fixes nothing. Breaks plenty.' },
+  { id: 'bucket-helmet', name: 'Bucket Helmet', slot: 'head', tier: 'old',
+    description: 'Smells like mop. Stops most rats.' },
+  { id: 'cable-headband', name: 'Cable Headband', slot: 'head', tier: 'old',
+    description: 'A coiled printer cable. Very cyberpunk, if you squint.' },
+  { id: 'floppy-armour', name: 'Floppy Disk Armour', slot: 'body', tier: 'old',
+    description: 'Holds 1.44MB of protection. Somehow.' },
+  { id: 'bin-bag-poncho', name: 'Bin Bag Poncho', slot: 'body', tier: 'old',
+    description: 'Waterproof, rat-proof, dignity-proof.' },
+  { id: 'duct-tape-mitts', name: 'Duct Tape Mitts', slot: 'hands', tier: 'old',
+    description: "Grippy. Also permanent. Don't ask how I get them off." },
+  { id: 'oven-glove', name: 'Single Oven Glove', slot: 'hands', tier: 'old',
+    description: 'One hand is safe from hot pans. The other hand lives dangerously.' },
+  { id: 'keyboard-sandals', name: 'Keyboard Sandals', slot: 'feet', tier: 'old',
+    description: 'Every step types something rude.' },
+  { id: 'odd-trainers', name: 'Odd Trainers', slot: 'feet', tier: 'old',
+    description: 'A left and a different left. Running is mostly in circles.' },
+  { id: 'flip-phone', name: 'Flip Phone', slot: 'gadget', tier: 'old',
+    description: 'Snaps shut with the drama of a call that mattered. None did.' },
+  { id: 'dial-up-modem', name: 'Dial-up Modem', slot: 'gadget', tier: 'old',
+    description: 'Makes a noise like a robot being strangled. Peak technology.' },
 
-  // Basic Tech
-  {
-    id: 'tangled-earbuds',
-    name: 'Tangled Earbuds',
-    tier: 'basic',
-    value: 4,
-    weight: 1.3,
-    description: 'One side works. The other side is just for vibes.',
-  },
-  {
-    id: 'budget-battery',
-    name: 'Budget Battery',
-    tier: 'basic',
-    value: 5,
-    description: "Lasts about as long as a New Year's resolution.",
-  },
-  {
-    id: 'knockoff-charger',
-    name: 'Knock-off Charger',
-    tier: 'basic',
-    value: 6,
-    description: 'Charges your phone and, occasionally, your curtains.',
-  },
-  {
-    id: 'cheap-phone-board',
-    name: 'Cheap Phone Board',
-    tier: 'basic',
-    value: 8,
-    weight: 0.7,
-    description: 'Third-hand, fourth-rate, fully cracked. Relatable.',
-  },
+  // ---- Basic Tech ----
+  { id: 'knockoff-taser', name: 'Knock-off Taser', slot: 'weapon', tier: 'basic', look: 'taser',
+    description: 'Says "Tazor" on the side. Still hurts. Mostly me.' },
+  { id: 'cracked-visor', name: 'Cracked VR Visor', slot: 'head', tier: 'basic',
+    description: 'Shows a lovely beach. Unhelpful in a knife fight.' },
+  { id: 'hi-vis-vest', name: 'Hi-Vis Vest', slot: 'body', tier: 'basic',
+    description: "Nobody questions someone in hi-vis. Not even the Spires." },
+  { id: 'budget-battery-gloves', name: 'Budget Battery Gloves', slot: 'hands', tier: 'basic',
+    description: "Lasts about as long as a New Year's resolution." },
+  { id: 'light-up-trainers', name: 'Light-up Trainers', slot: 'feet', tier: 'basic',
+    description: 'Flash with every step. Stealth is not an option.' },
+  { id: 'budget-battery-pack', name: 'Budget Battery Pack', slot: 'gadget', tier: 'basic',
+    description: 'Charges anything, slowly, while getting worryingly warm.' },
 
-  // Commercial Tech
-  {
-    id: 'retail-processor',
-    name: 'Retail Processor',
-    tier: 'commercial',
-    value: 35,
-    description: "Sticker says 'Powering Tomorrow!' It barely powered last Tuesday.",
-  },
-  {
-    id: 'smart-fridge-brain',
-    name: 'Smart Fridge Brain',
-    tier: 'commercial',
-    value: 45,
-    weight: 0.8,
-    description: "Knows you're out of milk. Has opinions about it.",
-  },
+  // ---- Commercial Tech ----
+  { id: 'retail-stun-baton', name: 'Retail Stun Baton', slot: 'weapon', tier: 'commercial', look: 'baton',
+    description: 'Comes with a 30-day returns policy. Victims not included.' },
+  { id: 'smart-cap', name: 'Smart Cap', slot: 'head', tier: 'commercial',
+    description: 'Tracks my thoughts for "a personalised experience". Joke is on them.' },
+  { id: 'consumer-smart-jacket', name: 'Consumer Smart Jacket', slot: 'body', tier: 'commercial',
+    description: 'Heats, cools, and sells my location to fourteen partners.' },
+  { id: 'fitness-gloves', name: 'Fitness Tracker Gloves', slot: 'hands', tier: 'commercial',
+    description: 'Congratulates me on every punch. Needy.' },
+  { id: 'subscription-sneakers', name: 'Subscription Sneakers', slot: 'feet', tier: 'commercial',
+    description: 'Premium grip is £4.99 a month. I hacked the free trial.' },
+  { id: 'smart-fridge-brain', name: 'Smart Fridge Brain', slot: 'gadget', tier: 'commercial',
+    description: "Knows I'm out of milk. Has opinions about it." },
 
-  // Industrial Tech
-  {
-    id: 'drone-motor',
-    name: 'Drone Motor',
-    tier: 'industrial',
-    value: 140,
-    description: 'Flew Spire parcels over the Groves for years. Never once dropped one by accident.',
-  },
+  // ---- Industrial Tech ----
+  { id: 'plasma-cutter', name: 'Plasma Cutter', slot: 'weapon', tier: 'industrial', look: 'cutter',
+    description: 'Rated for steel girders. Overkill for rats. I love it.' },
+  { id: 'welding-mask', name: 'Welding Mask', slot: 'head', tier: 'industrial',
+    description: 'Can stare directly at the sun. Or my bank balance.' },
+  { id: 'loader-harness', name: 'Loader Harness', slot: 'body', tier: 'industrial',
+    description: 'Built to lift crates. Now lifts my self-esteem.' },
+  { id: 'hydraulic-glove', name: 'Hydraulic Glove', slot: 'hands', tier: 'industrial',
+    description: 'Crushes cans, rivals and the occasional handshake.' },
+  { id: 'drone-motor-boots', name: 'Drone-motor Boots', slot: 'feet', tier: 'industrial',
+    description: 'Flew Spire parcels for years. Never once dropped one on purpose.' },
+  { id: 'factory-control-chip', name: 'Factory Control Chip', slot: 'gadget', tier: 'industrial',
+    description: 'Ran a whole assembly line. Now runs my toaster with menace.' },
 
-  // Military Tech
-  {
-    id: 'combat-chip',
-    name: 'Encrypted Combat Chip',
-    tier: 'military',
-    value: 500,
-    description: 'Designed to win wars. Currently living in a bin with me.',
-  },
+  // ---- Military Tech ----
+  { id: 'shock-blade', name: 'Shock Blade', slot: 'weapon', tier: 'military', look: 'shockblade',
+    description: 'Designed to win wars. Currently fighting a rat.' },
+  { id: 'tactical-helm', name: 'Tactical Helm', slot: 'head', tier: 'military',
+    description: 'Night vision, threat display, and a tiny voice saying "duck".' },
+  { id: 'armoured-exo-frame', name: 'Armoured Exo-frame', slot: 'body', tier: 'military',
+    description: 'Stops bullets, knives and most of my bad decisions.' },
+  { id: 'breacher-gauntlets', name: 'Breacher Gauntlets', slot: 'hands', tier: 'military',
+    description: 'Doors are now suggestions.' },
+  { id: 'recon-boots', name: 'Recon Boots', slot: 'feet', tier: 'military',
+    description: 'Silent steps. Still trip over everything.' },
+  { id: 'combat-chip', name: 'Combat Chip', slot: 'gadget', tier: 'military',
+    description: 'Plugs into the neck. Do not read the side effects.' },
 
-  // AI Tech
-  {
-    id: 'mind-core-fragment',
-    name: 'Mind Core Fragment',
-    tier: 'ai',
-    value: 2500,
-    description: "It keeps asking if you've considered a career change.",
-  },
+  // ---- AI Tech ----
+  { id: 'self-learning-blade', name: 'Self-learning Blade', slot: 'weapon', tier: 'ai', look: 'mindblade',
+    description: 'Gets better every swing. Also judges every swing.' },
+  { id: 'synthetic-halo', name: 'Synthetic Halo', slot: 'head', tier: 'ai',
+    description: 'Hums quietly. Occasionally finishes my sentences. Wrongly.' },
+  { id: 'adaptive-weave', name: 'Adaptive Weave', slot: 'body', tier: 'ai',
+    description: 'Learns where I get hit. Has a lot of data.' },
+  { id: 'predictive-grips', name: 'Predictive Grips', slot: 'hands', tier: 'ai',
+    description: 'Catches things before I drop them. Rude, honestly.' },
+  { id: 'pathfinder-treads', name: 'Pathfinder Treads', slot: 'feet', tier: 'ai',
+    description: 'Always know the way home. Keep suggesting I go there.' },
+  { id: 'mind-core-fragment', name: 'Mind Core Fragment', slot: 'gadget', tier: 'ai',
+    description: "It keeps asking if I've considered a career change." },
 
-  // Celestial Tech
-  {
-    id: 'humming-shard',
-    name: 'Humming Shard',
-    tier: 'celestial',
-    value: 20000,
-    description: "Warm, weightless, and humming a song I somehow miss. Don't tell the Spires.",
-  },
+  // ---- Celestial Tech ----
+  { id: 'fallen-star-shard', name: 'Fallen Star Shard', slot: 'weapon', tier: 'celestial', look: 'starshard',
+    description: "Not from here. Not from anywhere. Hums a song I somehow miss." },
+  { id: 'crown-of-quiet', name: 'Crown of Quiet', slot: 'head', tier: 'celestial',
+    description: 'Every thought goes silent. First time in years.' },
+  { id: 'skyfall-mantle', name: 'Skyfall Mantle', slot: 'body', tier: 'celestial',
+    description: 'Weighs nothing. Feels like being remembered.' },
+  { id: 'hands-of-the-fall', name: 'Hands of the Fall', slot: 'hands', tier: 'celestial',
+    description: "Warm. Too warm. Don't tell the Spires." },
+  { id: 'orbit-steps', name: 'Orbit Steps', slot: 'feet', tier: 'celestial',
+    description: 'Gravity is optional. Please screenshot this.' },
+  { id: 'unknown-signal', name: 'Unknown Signal', slot: 'gadget', tier: 'celestial',
+    description: 'A pulse from outside the city. It knows my name. My real one.' },
 ];
+
+/** What Nobody starts with. */
+export const STARTING_WEAPON = 'bent-pipe';

@@ -9,17 +9,22 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b",
-    "build:play": "node scripts/build-play.mjs"
+    "build:play": "node scripts/build-play.mjs",
+    "sim": "tsx scripts/simulate.ts",
+    "pyramid": "tsx scripts/pyramid.ts"
   },
   "dependencies": {
+    "phaser": "^4.2.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@types/node": "^26.6.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.2",
     "vitest": "^5.0.3"

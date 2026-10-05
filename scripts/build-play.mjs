@@ -1,11 +1,9 @@
-// Builds a single self-contained HTML file of the game (debug panel on) for sharing as a link.
+// Builds a single self-contained HTML file of the game for sharing as a link.
+// Debug tools are off by default; turn them on in the game's settings.
 import { execSync } from 'node:child_process';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 
-execSync('npx vite build --base ./ --outDir dist-play/build --emptyOutDir', {
-  stdio: 'inherit',
-  env: { ...process.env, VITE_DEBUG: 'true' },
-});
+execSync('npx vite build --base ./ --outDir dist-play/build --emptyOutDir', { stdio: 'inherit' });
 
 const assets = 'dist-play/build/assets';
 const files = readdirSync(assets);

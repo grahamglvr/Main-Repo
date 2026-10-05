@@ -1,74 +1,62 @@
 import { useState } from 'react';
-import { formatNumber } from '../game/format';
-import { bagCapacity, bagUsed } from '../game/logic';
 import { useGame } from '../game/store';
-import { Bag } from './Bag';
-import { Bin } from './Bin';
+import { BattleView } from './BattleView';
 import { DebugPanel } from './DebugPanel';
-import { DropFeed } from './DropFeed';
-import { Flash } from './Flash';
-import { Upgrades } from './Upgrades';
+import { GearTab } from './GearTab';
+import { ItemCard } from './ItemCard';
+import { LockedTab } from './LockedTab';
+import { RareMoment } from './RareMoment';
+import { Settings } from './Settings';
+import { TopBar } from './TopBar';
+import { Workbench } from './Workbench';
 
-type Tab = 'feed' | 'bag' | 'upgrades';
-
-// Debug panel shows in dev builds, builds made with VITE_DEBUG=true, or with ?debug in the URL.
-const DEBUG_ENABLED =
-  import.meta.env.DEV ||
-  import.meta.env.VITE_DEBUG === 'true' ||
-  new URLSearchParams(location.search).has('debug');
+const TABS = [
+  { id: 'gear', label: 'Gear' },
+  { id: 'skills', label: 'Skills' },
+  { id: 'crew', label: 'Crew' },
+  { id: 'collection', label: 'Collection' },
+] as const;
+type TabId = (typeof TABS)[number]['id'];
 
 export function App() {
-  const game = useGame((s) => s.game);
-  const [tab, setTab] = useState<Tab>('feed');
+  const [tab, setTab] = useState<TabId>('gear');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [debugOpen, setDebugOpen] = useState(false);
-
-  const used = bagUsed(game);
-  const capacity = bagCapacity(game);
+  const debugEnabled = useGame((s) => s.debugEnabled);
 
   return (
     <div className="app">
-      <Flash />
-      <header className="topbar">
-        <div className="stat">
-          <span className="stat-label">Tokens</span>
-          <span className="stat-value mono">{formatNumber(game.tokens)}</span>
-        </div>
-        <div className="stat stat-right">
-          <span className="stat-label">Bag</span>
-          <span className={`stat-value mono ${used >= capacity ? 'warn' : ''}`}>
-            {used}/{capacity}
-          </span>
-        </div>
-      </header>
+      <TopBar onSettings={() => setSettingsOpen(true)} />
+      <BattleView />
+      <div className="lower">
+        <Workbench />
+        <nav className="tabs" role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
+              className={`tab ${tab === t.id ? 'active' : ''} ${t.id !== 'gear' ? 'locked' : ''}`}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+        <section className="tab-panel">
+          {tab === 'gear' ? <GearTab /> : <LockedTab tab={tab} />}
+        </section>
+        <ItemCard />
+      </div>
+      <RareMoment />
 
-      <Bin />
-
-      <nav className="tabs">
-        {(['feed', 'bag', 'upgrades'] as const).map((t) => (
-          <button
-            key={t}
-            className={`tab ${tab === t ? 'active' : ''}`}
-            onClick={() => setTab(t)}
-          >
-            {t === 'feed' ? 'Drops' : t === 'bag' ? `Bag (${used})` : 'Upgrades'}
-          </button>
-        ))}
-      </nav>
-
-      <main className="panel">
-        {tab === 'feed' && <DropFeed />}
-        {tab === 'bag' && <Bag />}
-        {tab === 'upgrades' && <Upgrades />}
-      </main>
-
-      {DEBUG_ENABLED && (
-        <>
-          <button className="debug-toggle mono" onClick={() => setDebugOpen(true)}>
-            DEBUG
-          </button>
-          {debugOpen && <DebugPanel onClose={() => setDebugOpen(false)} />}
-        </>
+      {debugEnabled && (
+        <button className="debug-toggle mono" onClick={() => setDebugOpen(true)}>
+          DEBUG
+        </button>
       )}
+      {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
+      {debugOpen && debugEnabled && <DebugPanel onClose={() => setDebugOpen(false)} />}
     </div>
   );
 }
