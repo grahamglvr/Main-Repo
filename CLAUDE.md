@@ -53,4 +53,13 @@ UI stays dark and muted so loot colours are the brightest things on screen. Mono
 10. Stages 5–6
 11. Mobile packaging (Capacitor) and store builds
 
-**Current step: 1 (not started).**
+**Current step: 1 done. Next: 2.**
+
+## Commands
+- `npm install` then `npm run dev` → http://localhost:5173 (debug panel button bottom right)
+- `npm test` · `npm run typecheck` · `npm run build`
+
+## Layout
+- `src/data/` balance and text: tiers, items, upgrades and spots, config, Nobody's lines
+- `src/game/` pure logic (drops, tapping, selling, upgrades) plus the zustand store
+- `src/ui/` React components; `src/styles.css` holds the palette as CSS variables
